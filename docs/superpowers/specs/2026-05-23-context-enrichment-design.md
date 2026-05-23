@@ -26,7 +26,7 @@ Tier 1 and Tier 2 are tightly coupled: Places returns the `websiteUri` that Tier
 - **Synchronous endpoint.** No queue. Budget ~5–10s per call (two Places calls + HTML fetch + Gemini call).
 - **No photo bytes downloaded.** Places photo `media` requires API-key auth; store metadata only and defer byte fetch to a generation slice.
 - **Python deps via `uv`.**
-- **LLM:** Gemini `gemini-3-flash-preview` via Google AI Studio, using the official `google-genai` SDK with **Pydantic-based structured output** (BaseModel as `response_schema`).
+- **LLM:** Gemini `gemini-3.5-flash` via Google AI Studio, using the official `google-genai` SDK with **Pydantic-based structured output** (BaseModel as `response_schema`).
 
 ---
 
