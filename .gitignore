@@ -51,6 +51,3 @@ env/
 # Build artifacts
 *.pyc
 *.pyo
-
-# Per-job context-enrichment artifacts
-workspace/

@@ -3,8 +3,10 @@ import { SandboxClient } from "./SandboxClient";
 export default async function SandboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ url?: string }>;
+  searchParams: Promise<{ job_id?: string; name?: string }>;
 }) {
-  const { url } = await searchParams;
-  return <SandboxClient initialUrl={url ?? null} />;
+  const { job_id, name } = await searchParams;
+  return (
+    <SandboxClient initialJobId={job_id ?? null} initialName={name ?? null} />
+  );
 }

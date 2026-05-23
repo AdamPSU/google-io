@@ -1,0 +1,26 @@
+.bounceCardsContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bounceCardsContainer .card {
+  position: absolute;
+  width: 144px;
+  aspect-ratio: 1;
+  border: 4px solid #fffdf6;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 16px 32px -12px rgba(25, 21, 18, 0.45),
+    0 4px 12px -4px rgba(25, 21, 18, 0.25);
+  background: #191512;
+}
+
+.bounceCardsContainer .card .image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

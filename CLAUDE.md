@@ -1,100 +1,97 @@
 # Project
 
-A self-generating digital business card. User pastes a URL, the app generates a one-off micro-site that reflects that brand's identity through generated assets (palette, type, imagery, copy, etc.).
+A self-generating digital business card. User types a business name; the app produces a one-off micro-site that reflects that brand's identity (palette, type, copy, imagery).
 
-The full system has multiple parts:
+Single-user app for now — no auth, no concurrency, no multi-tenancy.
 
-- **Slice 1 — Ingestion (this build):** URL → `brief.json`
-- **Slice 2 — Generation:** two-agent CLI pipeline (prompter + builder) that consumes `brief.json` and emits a site bundle
-- **Slice 3+ —** Playground UI, history, sharing, etc.
+## Slices
 
-**Do not build slice 2 or later. Build only slice 1.** Design slice 1 so its output (`brief.json`) is the sole contract slice 2 will consume.
+| Slice | Status | What |
+| --- | --- | --- |
+| 1. Context enrichment | building | name → Places lookup + website fetch + Gemini distillation → `BusinessContext`; artifacts uploaded to Supabase Storage |
+| 2. Sandbox + generation API | done | DB schema, Storage layout, `/api/generation*` routes, `/sandbox` page that iframes the rendered card |
+| 3. Two-CLI builder | building | `run_generation` shells out to a prompter Claude + a builder Claude that produce the real `index.html` |
+| 4+. Polish | not started | history list UI, sharing, etc. |
 
-# Scope of this build (slice 1)
-
-Take a URL. Return a structured `brief.json` describing the brand. That's it.
-
-## Pipeline
-
-```
-input: url
-```
-
-1. **Fetch the URL**
-   - Plain HTTP via `httpx`
-   - Save raw HTML to workspace
-
-2. **Google Places API (New) lookup**
-   - `POST https://places.googleapis.com/v1/places:searchText` with `textQuery = business name + locality`
-   - Take first result → `place_id`
-   - `GET https://places.googleapis.com/v1/places/{place_id}` with field mask covering: `displayName`, `rating`, `userRatingCount`, `reviews`, `formattedAddress`, `regularOpeningHours`, `priceLevel`, `types`, `editorialSummary`, `websiteUri`, `photos`
-   - Reviews are capped at 5 by the API; that is expected
-   - Save raw response to workspace as `places.json`
-
-3. **LLM call (Claude via API)**
-   - Input: raw page text + Places response + reviews
-   - Output: `brief.json`, schema-constrained
-   - Use tool use / structured output to enforce the schema
+## Repo layout
 
 ```
-output: workspace/<job_id>/ containing:
-  - brief.json        (the contract)
-  - raw-html.html     (audit trail)
-  - places.json       (audit trail)
+src/backend/      FastAPI app (uv-managed, Python 3.12)
+src/frontend/     Next.js 16 app (bun-managed)
+supabase/         migrations + config.toml; project is hosted, CLI is linked
 ```
 
-## `brief.json` schema
+`job_id` is a ULID minted by `POST /api/search`. It keys the `generations` row + all Storage prefixes (`<job_id>/context/` for slice-1 artifacts, `<job_id>/site/` for the rendered card). Nothing about a job persists on local disk.
 
-```json
-{
-  "name": "string",
-  "url": "string",
-  "category": "string",
-  "location": "string | null",
-  "tagline": "string | null",
-  "description": "string",
-  "vibe_tags": ["string"],
-  "tone": "string",
-  "key_phrases": ["string"],
-  "visual_cues": ["string"],
-  "brand_image_path": "string | null",
-  "reviews_summary": "string | null"
-}
+## Dev commands
+
+Supabase is **hosted** (no local Docker stack). The project ref lives in `supabase/.temp/project-ref`; the CLI is already linked.
+
+```bash
+# Schema changes — apply to hosted DB
+supabase migration new <name>                   # scaffold a new SQL file
+# ...edit the SQL...
+SUPABASE_DB_PASSWORD=<db-pw> supabase db push   # apply pending migrations
+
+# Backend
+cd src/backend && uv sync                       # install deps
+cd src/backend && uv run uvicorn main:app --reload   # serve on :8000
+
+# Frontend
+cd src/frontend && bun install
+cd src/frontend && bun dev                      # serve on :3000
 ```
 
-Missing source data → set to `null`. The LLM infers vibe, tone, visual cues from whatever signal is present.
+Schema state on hosted is canonical. `supabase db pull` if you need to introspect remote. There is no `supabase db reset` workflow against hosted — destructive.
 
-# Tech choices
+## Environment
 
-- **Language:** Python 3.11+, managed with `uv`
-- **HTTP fetch:** `httpx`
-- **LLM:** Google AI Studio, `gemini-3.5-flash`, structured output via Pydantic `response_schema`
-- **Storage:** local filesystem, one directory per job, keyed by ULID
+`.env` at the repo root (loaded by `python-dotenv` from `src/backend/main.py`):
 
-FastAPI backend in `src/backend/` exposes `POST /search {"query": str}`. Next.js frontend in `src/frontend/` posts the query and renders the result. Entry is query-based (e.g. "Seu Pizza Lisboa") rather than URL-based — Places provides the `websiteUri` which the backend then fetches.
+- `PLACES_API` — Google Places API (New) key
+- `GEMINI_API_KEY` — Google AI Studio key (slice 1 distillation)
+- `SUPABASE_URL` — hosted project URL (`https://<ref>.supabase.co`); from Dashboard → Settings → API
+- `SUPABASE_SERVICE_ROLE_KEY` — secret key (`sb_secret_…`); service role bypasses RLS, backend-only, never ship to the frontend
 
-Each `/search` call writes to `./workspace/<job_id>/`, keyed by ULID.
+Backend fails fast if `PLACES_API` or `GEMINI_API_KEY` is missing. Supabase env is lazy — only fails when a Supabase-touching route is hit without it.
 
-# Configuration
+## Backend
 
-Environment variables (`.env`, loaded via `python-dotenv`):
+`src/backend/main.py` routes:
+- `GET /health`
+- `POST /api/search {query}` → `BusinessContext`. Places lookup + site fetch + Gemini distillation. Uploads `places.json`, `raw-html.html`, `site-distilled.json` to Storage at `<job_id>/context/`.
+- `POST /api/generation {job_id}` → `{job_id}`. Downloads slice-1 context from Storage, runs the two-CLI builder in a tempdir, uploads `<job_id>/site/index.html`, inserts the row.
+- `GET /api/generation/current` → latest row + 1-hour signed `preview_url`, or 204.
+- `GET /api/generation/{job_id}` → same shape for any past row, or 404.
+- `GET /api/generations?limit=N` → list newest first.
 
-- `PLACES_API`
-- `GEMINI_API_KEY`
+`src/backend/generation.py` owns the two-CLI subprocess plumbing. The builder writes to a `tempfile.TemporaryDirectory()`; the HTML is read out before the dir is cleaned up.
 
-Fail loudly at startup if any is missing.
+The Supabase Python client is sync — wrap calls in `asyncio.to_thread` (see existing patterns in `main.py`).
 
-# Constraints
+CORS is open to `http://localhost:3000` only.
 
-- **Determinism:** Same URL should produce a near-identical brief. Set LLM temperature low (0.2). No randomness in scraping/parsing logic.
-- **Graceful degradation:** Any step except step 3 may produce partial data. Step 3's LLM call must handle nulls everywhere.
-- **No shared state across runs:** Each job gets its own workspace directory. Never read from another job's workspace.
-- **Idempotency:** If a workspace already exists with completed `brief.json`, re-running the same `job_id` is a no-op (return the existing brief).
+## Frontend
 
-# Acceptance criteria
+Next.js 16 + React 19 + Tailwind 4 + bun. See `src/frontend/AGENTS.md` for the "read the bundled docs first" rule. Routes:
 
-- `python ingest.py https://seupizza.com` completes without errors
-- Workspace contains all three artifacts
-- `brief.json` matches the schema
-- Re-running with the same `job_id` returns immediately
-- Running against a URL with no Places match produces a valid `brief.json` with `location: null`, `reviews_summary: null`
+- `/` — search form, calls `/api/search`, then `router.push('/sandbox?job_id=<id>')`
+- `/sandbox` — server page unwraps `?job_id=`, hands it to `SandboxClient`; client island fetches `/api/generation/current`, auto-triggers a generation if `?job_id=` is present, full-bleed iframes the `preview_url` with `sandbox="allow-scripts"`
+
+## Data model
+
+`public.generations`: `id text pk, url text, created_at timestamptz`. RLS enabled with no policies — backend uses the service-role key. Rows are immutable; "current" = latest row. Past rows stay addressable by `job_id`.
+
+Storage bucket `generations` (private). Keys:
+- `<job_id>/context/places.json` — slice 1
+- `<job_id>/context/raw-html.html` — slice 1 (audit trail; nothing reads it back yet)
+- `<job_id>/context/site-distilled.json` — slice 1
+- `<job_id>/site/index.html` — slice 3 (the rendered card)
+
+## Gotchas
+
+- **Two LLMs in play.** Slice 1 uses Gemini for distillation; slice 3 uses Claude for the two-CLI builder. Don't unify them — they serve different roles.
+- **No local state per job.** Everything keyed to a `job_id` lives in Supabase. The builder's working dir is a `tempfile.TemporaryDirectory()`, cleaned up after upload. Don't reintroduce `./workspace/`.
+- **The iframe expects single-file HTML.** When the builder emits multi-file bundles, we'll either flip the bucket to public-read or add a backend proxy route.
+- **Don't add `status` / `retracted` / `is_current` columns to `generations`.** "Current" is a query; rows are immutable. Deliberate.
+- **Next.js 16 isn't your training data.** Frontend changes must consult `src/frontend/node_modules/next/dist/docs/`.

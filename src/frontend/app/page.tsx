@@ -2,108 +2,312 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import BounceCards from "@/components/ui/bounce-cards";
+import { PromptInputBox } from "@/components/ui/prompt-input-box";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-type Result = {
-  place_id: string;
-  name: string;
-  address: string;
-  website_uri: string | null;
-};
+const CREAM = "#FFFDF6";
 
-type Status =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "result"; data: Result }
-  | { kind: "empty" }
-  | { kind: "error"; message: string };
+const MENU_IMAGES = [
+  // round table of dishes
+  "https://images.unsplash.com/photo-1755811248324-c70c1f10a7fd?w=500&q=80&auto=format&fit=crop",
+  // cozy dimly-lit restaurant table
+  "https://images.unsplash.com/photo-1771532447024-ee348a315f41?w=500&q=80&auto=format&fit=crop",
+  // pasta + wine
+  "https://images.unsplash.com/photo-1620475676913-9497df261cc3?w=500&q=80&auto=format&fit=crop",
+  // cafe interior
+  "https://images.unsplash.com/photo-1749922217403-412f69429dc5?w=500&q=80&auto=format&fit=crop",
+  // coffee + croissant
+  "https://images.unsplash.com/photo-1721277000438-488066df7ac8?w=500&q=80&auto=format&fit=crop",
+];
+
+const MENU_TRANSFORMS = [
+  "rotate(8deg) translate(-128px)",
+  "rotate(4deg) translate(-64px)",
+  "rotate(-3deg)",
+  "rotate(-8deg) translate(64px)",
+  "rotate(3deg) translate(128px)",
+];
+
+type Status = { kind: "idle" } | { kind: "loading" };
+
+// Opens the job's SSE stream and resolves as soon as the backend publishes
+// the "context" event (Places lookup + site distillation done). Returns the
+// resolved business name from Places, falling back to the user's query if
+// the event never carries one. Only a real `context` event or the 30s safety
+// timeout resolves — transient SSE errors are ignored so the magic border
+// never blinks past the user during a connection blip.
+const MIN_BORDER_HOLD_MS = 1500;
+const CONTEXT_TIMEOUT_MS = 30_000;
+
+function waitForContext(jobId: string, fallbackName: string): Promise<string> {
+  return new Promise((resolve) => {
+    const es = new EventSource(`${API_URL}/api/jobs/${jobId}/events`);
+    const startedAt = Date.now();
+
+    const finish = (name: string) => {
+      clearTimeout(timeoutId);
+      es.close();
+      // Hold for a minimum so the spinning border is always perceivable —
+      // even if the backend resolves context instantly (cached job, etc.).
+      const elapsed = Date.now() - startedAt;
+      const wait = Math.max(0, MIN_BORDER_HOLD_MS - elapsed);
+      window.setTimeout(() => resolve(name), wait);
+    };
+
+    const timeoutId = window.setTimeout(
+      () => finish(fallbackName),
+      CONTEXT_TIMEOUT_MS,
+    );
+
+    es.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data) as {
+          event?: string;
+          name?: string;
+        };
+        if (event.event === "context") {
+          finish(
+            typeof event.name === "string" && event.name.length > 0
+              ? event.name
+              : fallbackName,
+          );
+        } else if (event.event === "timeout") {
+          // Slice 1 failed (no Places result, network, etc). Don't make
+          // the user wait the full safety timeout — navigate now with
+          // the typed query and let the sandbox show its soft-retry.
+          finish(fallbackName);
+        }
+      } catch {
+        // Ignore malformed events; keep listening.
+      }
+    };
+
+    es.onerror = () => {
+      // EventSource auto-reconnects on transient errors. Do NOT resolve on
+      // terminal close either — premature navigation defeats the whole
+      // point of holding the border until context is real. The safety
+      // timeout above bounds the worst case.
+    };
+  });
+}
 
 export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function submit() {
     const q = query.trim();
     if (!q) return;
     setStatus({ kind: "loading" });
     try {
-      const res = await fetch(`${API_URL}/api/search`, {
+      const res = await fetch(`${API_URL}/api/jobs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: q }),
       });
-      if (res.status === 404) {
-        setStatus({ kind: "empty" });
-        return;
-      }
       if (!res.ok) {
-        setStatus({ kind: "error", message: `request failed (${res.status})` });
+        // Silent fallback — sandbox shows the soft retry once the
+        // (missing) job times out. User never sees the error.
+        router.push(`/sandbox?name=${encodeURIComponent(q)}`);
         return;
       }
-      const data: Result = await res.json();
-      setStatus({ kind: "result", data });
-      const url = data.website_uri ?? q;
-      router.push(`/sandbox?url=${encodeURIComponent(url)}`);
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : "request failed",
-      });
+      const { job_id } = (await res.json()) as { job_id: string };
+
+      // Hold the spinning border until the backend has built the
+      // BusinessContext (Places + site distillation). The "context"
+      // SSE event is the first signal the job has real data; only
+      // then do we transition to the sandbox.
+      const resolvedName = await waitForContext(job_id, q);
+
+      router.push(
+        `/sandbox?job_id=${encodeURIComponent(job_id)}&name=${encodeURIComponent(resolvedName)}`,
+      );
+    } catch {
+      router.push(`/sandbox?name=${encodeURIComponent(q)}`);
     }
   }
 
+  const busy = status.kind === "loading";
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-xl flex-col gap-8 px-6 py-24">
-        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          Search a place
-        </h1>
+    <div className="relative isolate flex min-h-screen flex-1 items-center justify-center overflow-hidden px-6 py-12 sm:py-16">
+      <BackgroundScene />
 
-        <form onSubmit={onSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. Seu Pizza Lisboa"
-            className="flex-1 rounded-md border border-zinc-300 bg-white px-4 py-2 text-base text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-          />
-          <button
-            type="submit"
-            disabled={status.kind === "loading"}
-            className="rounded-md bg-black px-5 py-2 text-base font-medium text-white transition-colors hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-50 dark:text-black dark:hover:bg-zinc-200"
+      <main
+        className="relative z-10 flex w-full max-w-xl flex-col items-center text-center"
+        style={{ color: CREAM }}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <span
+            className="fade-up flex items-center gap-4 text-[11px] tracking-[0.22em]"
+            style={{
+              color: "rgba(255,253,246,0.78)",
+              animationDelay: "0ms",
+            }}
           >
-            Search
-          </button>
-        </form>
+            <Flourish />
+            <span>one name · one carte</span>
+            <Flourish flip />
+          </span>
 
-        <div className="min-h-24">
-          {status.kind === "loading" && (
-            <p className="text-zinc-600 dark:text-zinc-400">Searching…</p>
-          )}
-          {status.kind === "empty" && (
-            <p className="text-zinc-600 dark:text-zinc-400">No results.</p>
-          )}
-          {status.kind === "error" && (
-            <p className="text-red-600 dark:text-red-400">{status.message}</p>
-          )}
-          {status.kind === "result" && (
-            <div className="flex flex-col gap-2 rounded-md border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 className="text-lg font-semibold text-black dark:text-zinc-50">
-                {status.data.name}
-              </h2>
-              <p className="text-zinc-700 dark:text-zinc-300">
-                {status.data.address}
-              </p>
-              <p className="font-mono text-xs text-zinc-500 dark:text-zinc-500">
-                {status.data.place_id}
-              </p>
-            </div>
-          )}
+          <h1
+            className="fade-up m-0 inline-flex items-baseline"
+            style={{
+              fontSize: "clamp(4rem, 12vw, 7.5rem)",
+              letterSpacing: "-0.035em",
+              lineHeight: 1,
+              color: CREAM,
+              textShadow:
+                "0 1px 1px rgba(25,21,18,0.35), 0 8px 28px rgba(25,21,18,0.35)",
+              animationDelay: "80ms",
+            }}
+          >
+            <span style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
+              Carte
+            </span>
+            <em
+              className="font-normal italic"
+              style={{
+                fontFamily: "var(--font-serif)",
+                fontSize: "1.08em",
+                marginLeft: "-0.02em",
+              }}
+            >
+              .
+            </em>
+          </h1>
+
+          <p
+            className="fade-up whitespace-nowrap"
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontStyle: "italic",
+              fontSize: "clamp(1.05rem, 1.5vw, 1.3rem)",
+              lineHeight: 1.3,
+              color: "rgba(255,253,246,0.92)",
+              textShadow: "0 1px 18px rgba(25,21,18,0.45)",
+              animationDelay: "220ms",
+            }}
+          >
+            your business identity, packed into one carte.
+          </p>
+        </div>
+
+        <div
+          className="fade-up mt-14 w-full max-w-lg"
+          style={{ animationDelay: "360ms" }}
+        >
+          <PromptInputBox
+            value={query}
+            onChange={setQuery}
+            onSubmit={submit}
+            isLoading={busy}
+            autoFocus
+            placeholder="Seu Pizza Lisboa"
+          />
         </div>
       </main>
+
+      <div
+        className="fade-up pointer-events-auto absolute bottom-4 left-1/2 z-10 -translate-x-1/2"
+        style={{ animationDelay: "600ms" }}
+      >
+        <BounceCards
+          images={MENU_IMAGES}
+          transformStyles={MENU_TRANSFORMS}
+          containerWidth={440}
+          containerHeight={190}
+          animationDelay={0.9}
+          animationStagger={0.08}
+          easeType="elastic.out(1, 0.55)"
+          enableHover
+        />
+      </div>
     </div>
   );
 }
+
+function BackgroundScene() {
+  return (
+    <>
+      <video
+        className="absolute inset-0 -z-30 h-full w-full object-cover motion-reduce:hidden"
+        src="/final-bg.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        disableRemotePlayback
+        aria-hidden
+        style={{ filter: "blur(3px) saturate(1.05)", transform: "scale(1.03)" }}
+      />
+      {/* Reduced-motion fallback */}
+      <div
+        className="absolute inset-0 -z-40 hidden motion-reduce:block"
+        aria-hidden
+        style={{ background: "#191512" }}
+      />
+      {/* Dark scrim — gives cream text consistent legibility across any video frame.
+         Slightly heavier at top/bottom, lighter in the middle, so the hero feels lit. */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-20"
+        aria-hidden
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(25,21,18,0.55) 0%, rgba(25,21,18,0.32) 35%, rgba(25,21,18,0.32) 65%, rgba(25,21,18,0.55) 100%)",
+        }}
+      />
+      {/* Film grain — subtle tactile noise across the whole stage. */}
+      <div
+        className="pointer-events-none absolute inset-0 -z-10"
+        aria-hidden
+        style={{
+          opacity: 0.08,
+          mixBlendMode: "overlay",
+          backgroundImage:
+            "url(\"data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E\")",
+          backgroundSize: "220px 220px",
+        }}
+      />
+    </>
+  );
+}
+
+function Flourish({ flip = false }: { flip?: boolean }) {
+  return (
+    <svg
+      width="58"
+      height="12"
+      viewBox="0 0 58 12"
+      fill="none"
+      aria-hidden
+      style={{
+        color: "rgba(255,253,246,0.78)",
+        transform: flip ? "scaleX(-1)" : undefined,
+        flexShrink: 0,
+      }}
+    >
+      {/* hairline rule that fades toward the floral mark */}
+      <line
+        x1="0"
+        y1="6"
+        x2="38"
+        y2="6"
+        stroke="currentColor"
+        strokeWidth="0.6"
+        opacity="0.5"
+      />
+      {/* 4-petal floral fleuron */}
+      <ellipse cx="48" cy="2.6" rx="1" ry="2.2" fill="currentColor" opacity="0.55" />
+      <ellipse cx="48" cy="9.4" rx="1" ry="2.2" fill="currentColor" opacity="0.55" />
+      <ellipse cx="44.6" cy="6" rx="2.2" ry="1" fill="currentColor" opacity="0.55" />
+      <ellipse cx="51.4" cy="6" rx="2.2" ry="1" fill="currentColor" opacity="0.55" />
+      <circle cx="48" cy="6" r="0.7" fill="currentColor" opacity="0.95" />
+    </svg>
+  );
+}
+

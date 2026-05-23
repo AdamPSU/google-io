@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bollywood Pizza — A festival of taste, every slice</title>
+<meta name="description" content="San Francisco's loudest pizzeria. Authentic Indian spice meets classic American pizza. Open till 4 AM in SoMa." />
+<style>
+  /* ---------- Tokens ---------- */
+  :root{
+    --saffron:#F2A516;
+    --saffron-deep:#E29408;
+    --red:#D7321D;
+    --red-deep:#B0260F;
+    --char:#1A0F0A;
+    --mint:#7FB069;
+    --cream:#F7EDD6;
+    --magenta:#E5117A;
+    --paper-noise:
+      radial-gradient(rgba(26,15,10,0.05) 1px, transparent 1.2px) 0 0/3px 3px,
+      radial-gradient(rgba(26,15,10,0.04) 1px, transparent 1.2px) 1.5px 1.5px/3px 3px;
+    --display: "Bagel Fat One", "Rozha One", "Ultra", "Bodoni 72 Smallcaps", "Big Caslon", "Cooper Black", "Georgia", serif;
+    --body: "Söhne", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --script: "Caveat", "Bradley Hand", "Marker Felt", "Comic Sans MS", cursive;
+  }
+
+  /* ---------- Reset ---------- */
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--body);
+    color:var(--char);
+    background:var(--cream);
+    font-size:19px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  img,svg{display:block;max-width:100%}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;border:0;cursor:pointer;background:none;color:inherit}
+
+  /* ---------- Helpers ---------- */
+  .wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+  .display{font-family:var(--display);font-weight:400;line-height:.92;letter-spacing:-0.01em}
+  .script{font-family:var(--script);font-weight:400}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;
+    padding:14px 24px;
+    background:transparent;
+    transition:background .25s ease, box-shadow .25s ease, color .25s ease, padding .25s ease;
+    color:var(--char);
+  }
+  .topbar.solid{
+    background:var(--cream);
+    box-shadow:0 1px 0 rgba(26,15,10,0.08), 0 12px 28px -22px rgba(26,15,10,0.5);
+    padding:10px 24px;
+  }
+  .wordmark{display:inline-flex;align-items:center;gap:10px;font-family:var(--display);font-size:22px;letter-spacing:-0.01em}
+  .wordmark .dot{
+    width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffd47a 0 18%, var(--red) 22% 70%, var(--char) 75% 100%);
+    box-shadow:0 0 0 2px var(--cream);
+    transform:translateY(1px);
+  }
+  .wordmark em{font-style:normal;color:var(--red)}
+  .topbar nav{display:flex;align-items:center;gap:22px;font-size:14px;font-weight:600}
+  .topbar .phone{display:none}
+  @media (min-width:820px){
+    .topbar .phone{display:inline-flex;align-items:center;gap:8px}
+    .topbar nav a:not(.cta-pill){opacity:.85}
+    .topbar nav a:not(.cta-pill):hover{opacity:1;color:var(--red)}
+  }
+  .cta-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:10px 16px;border-radius:999px;
+    background:var(--char);color:var(--cream);
+    font-weight:700;letter-spacing:.02em;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .cta-pill:hover{background:var(--magenta);transform:translateY(-1px) rotate(-1deg)}
+  .cta-pill.red{background:var(--red)}
+  .cta-pill.red:hover{background:var(--magenta)}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #ffce5b 0%, transparent 60%),
+      radial-gradient(900px 700px at 110% 110%, #f5b53c 0%, transparent 55%),
+      var(--saffron);
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .hero::before{
+    content:"";position:absolute;inset:0;
+    background-image:var(--paper-noise);
+    mix-blend-mode:multiply;opacity:.55;pointer-events:none;
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(45deg, rgba(26,15,10,0.025) 0 2px, transparent 2px 6px);
+    pointer-events:none;
+  }
+  .hero-inner{
+    position:relative;z-index:2;
+    display:grid;grid-template-columns:1fr;gap:24px;
+    align-items:center;
+    padding:120px 28px 64px;
+    max-width:1320px;margin:0 auto;
+    min-height:100vh;
+  }
+  @media (min-width:960px){
+    .hero-inner{grid-template-columns:1.05fr .95fr;padding:128px 40px 80px}
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:10px;
+    font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+    padding:8px 14px;border-radius:999px;
+    background:var(--char);color:var(--cream);
+    transform:rotate(-2deg);
+  }
+  .eyebrow .blink{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px rgba(127,176,105,.35)}
+  .h1{
+    font-size:clamp(3.6rem, 11.5vw, 9rem);
+    margin:18px 0 14px;
+    color:var(--char);
+  }
+  .h1 .l1{display:block;transform:rotate(-1.4deg);transform-origin:left}
+  .h1 .l2{display:block;color:var(--red);transform:rotate(1.2deg) translateX(2%);}
+  .h1 .l3{display:block;transform:rotate(-.6deg)}
+  .h1 .amp{
+    display:inline-block;color:var(--magenta);
+    font-family:var(--script);font-size:.55em;vertical-align:.18em;margin:0 .08em;
+    transform:rotate(-8deg);
+  }
+  .sub{
+    max-width:36ch;font-size:clamp(17px,2.1vw,22px);
+    line-height:1.45;color:var(--char);
+    font-weight:500;
+  }
+  .sub b{font-weight:800}
+  .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:18px 26px;border-radius:14px;
+    font-weight:800;letter-spacing:.02em;font-size:17px;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+    min-height:54px;
+  }
+  .btn .arr{transition:transform .2s ease}
+  .btn:hover .arr{transform:translateX(4px) rotate(-8deg)}
+  .btn-primary{background:var(--char);color:var(--cream);box-shadow:6px 6px 0 var(--red)}
+  .btn-primary:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--red)}
+  .btn-ghost{background:var(--cream);color:var(--char);box-shadow:6px 6px 0 var(--char)}
+  .btn-ghost:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--char);background:#fff}
+
+  .rating{
+    margin-top:26px;display:inline-flex;align-items:center;gap:12px;
+    padding:10px 16px;border-radius:999px;background:rgba(26,15,10,0.08);
+    font-weight:700;font-size:14px;
+  }
+  .stars{display:inline-flex;gap:2px}
+  .stars svg{width:18px;height:18px}
+  .rating .sep{opacity:.5}
+
+  /* Floating sticker */
+  .sticker{
+    position:absolute;z-index:3;
+    display:grid;place-items:center;
+    width:120px;height:120px;border-radius:50%;
+    background:var(--magenta);color:var(--cream);
+    font-family:var(--display);font-size:18px;line-height:1;
+    text-align:center;padding:8px;
+    box-shadow:0 10px 24px -10px rgba(0,0,0,.35);
+    transform:rotate(-12deg);
+  }
+  .sticker.s1{top:18%;right:5%;animation:wobble 6s ease-in-out infinite}
+  @keyframes wobble{0%,100%{transform:rotate(-12deg) translateY(0)}50%{transform:rotate(-6deg) translateY(-6px)}}
+  .sticker .burst{
+    position:absolute;inset:-10px;border-radius:50%;
+    background:
+      conic-gradient(from 0deg, var(--magenta) 0 8%, transparent 8% 12%, var(--magenta) 12% 20%, transparent 20% 24%,
+        var(--magenta) 24% 32%, transparent 32% 36%, var(--magenta) 36% 44%, transparent 44% 48%,
+        var(--magenta) 48% 56%, transparent 56% 60%, var(--magenta) 60% 68%, transparent 68% 72%,
+        var(--magenta) 72% 80%, transparent 80% 84%, var(--magenta) 84% 92%, transparent 92% 96%, var(--magenta) 96% 100%);
+    z-index:-1;animation:spin 18s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Hero pizza art */
+  .hero-art{position:relative;justify-self:end;width:min(640px,92vw);aspect-ratio:1/1;margin-right:-12%}
+  @media (min-width:960px){.hero-art{margin-right:-18%}}
+  .pizza{
+    position:absolute;inset:0;
+    animation:slowspin 36s linear infinite;
+    filter:drop-shadow(0 30px 40px rgba(26,15,10,.35));
+  }
+  @keyframes slowspin{to{transform:rotate(360deg)}}
+
+  /* ---------- Section common ---------- */
+  section{position:relative}
+  .sec-head{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+    margin-bottom:42px;
+  }
+  .sec-title{
+    font-family:var(--display);
+    font-size:clamp(2.6rem,6.5vw,5.2rem);
+    line-height:.95;letter-spacing:-0.01em;
+    transform:rotate(-1.6deg);transform-origin:left bottom;
+    max-width:18ch;
+  }
+  .sec-title .red{color:var(--red)}
+  .sec-kicker{
+    font-family:var(--script);font-size:clamp(22px,2.4vw,30px);color:var(--magenta);
+    transform:rotate(2deg);align-self:flex-end;margin-bottom:6px;
+  }
+  .ornament{
+    display:inline-block;color:var(--red);opacity:.85;
+    font-family:"Georgia",serif;font-size:1.4em;line-height:1;
+    transform:translateY(-.05em);
+  }
+
+  /* ---------- The Pizzas ---------- */
+  #pizzas{padding:110px 0 90px;background:var(--cream);background-image:var(--paper-noise);background-blend-mode:multiply}
+  .pizza-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:36px 28px;
+  }
+  @media (min-width:680px){.pizza-grid{grid-template-columns:repeat(2,1fr)}}
+  @media (min-width:1040px){
+    .pizza-grid{
+      grid-template-columns:repeat(12,1fr);
+      grid-auto-rows:auto;
+    }
+    .pcard:nth-child(1){grid-column:1/span 6;margin-top:0}
+    .pcard:nth-child(2){grid-column:7/span 6;margin-top:48px}
+    .pcard:nth-child(3){grid-column:1/span 6;margin-top:-20px}
+    .pcard:nth-child(4){grid-column:7/span 6;margin-top:24px}
+  }
+  .pcard{
+    position:relative;background:transparent;
+    transition:transform .25s ease;
+  }
+  .pcard:hover{transform:translateY(-4px) rotate(-.6deg)}
+  .pcard:nth-child(2):hover{transform:translateY(-4px) rotate(.6deg)}
+  .pcard:nth-child(3):hover{transform:translateY(-4px) rotate(-.8deg)}
+  .pcard:nth-child(4):hover{transform:translateY(-4px) rotate(.4deg)}
+
+  .pframe{
+    position:relative;aspect-ratio:1/1;border-radius:18px;overflow:hidden;
+    background:#2a160d;
+    box-shadow:
+      inset 0 0 0 6px var(--cream),
+      inset 0 0 0 8px rgba(26,15,10,.18),
+      0 18px 30px -22px rgba(26,15,10,.5);
+  }
+  .pframe::before{
+    content:"";position:absolute;inset:0;background-image:var(--paper-noise);mix-blend-mode:overlay;opacity:.5;pointer-events:none;z-index:3;
+  }
+  .pframe svg{width:100%;height:100%}
+  .pmeta{padding:18px 6px 0;display:flex;flex-direction:column;gap:6px}
+  .pname{font-family:var(--display);font-size:clamp(1.8rem,3.4vw,2.6rem);line-height:1;letter-spacing:-.01em}
+  .pdesc{font-size:17px;color:#2a1a12;max-width:38ch}
+  .ptag{
+    display:inline-flex;align-items:center;gap:6px;align-self:flex-start;
+    margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--red);color:var(--cream);padding:5px 10px;border-radius:6px;
+    transform:rotate(-2deg);
+  }
+  .ptag.green{background:var(--mint);color:var(--char)}
+  .ptag.magenta{background:var(--magenta);color:var(--cream)}
+  .pbadge{
+    position:absolute;top:-10px;right:-10px;z-index:4;
+    width:74px;height:74px;border-radius:50%;
+    background:var(--mint);color:var(--char);
+    display:grid;place-items:center;text-align:center;
+    font-family:var(--display);font-size:13px;line-height:1;padding:6px;
+    transform:rotate(12deg);
+    box-shadow:0 6px 14px -6px rgba(0,0,0,.4);
+  }
+  .pbadge.red{background:var(--red);color:var(--cream)}
+  .pbadge.mag{background:var(--magenta);color:var(--cream)}
+
+  /* ---------- Beyond Pizza ---------- */
+  #beyond{
+    padding:100px 0 110px;
+    background:var(--red);
+    color:var(--cream);
+    position:relative;overflow:hidden;
+  }
+  #beyond::before{
+    content:"";position:absolute;inset:0;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 7px),
+      var(--paper-noise);
+    mix-blend-mode:overlay;pointer-events:none;
+  }
+  #beyond .sec-title{color:var(--cream)}
+  #beyond .sec-title .red{color:var(--saffron)}
+  #beyond .sec-kicker{color:var(--saffron)}
+  .strip{
+    display:flex;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;
+    padding:6px 28px 22px;margin:0 -28px;
+    scrollbar-width:thin;scrollbar-color:var(--saffron) transparent;
+  }
+  .strip::-webkit-scrollbar{height:10px}
+  .strip::-webkit-scrollbar-thumb{background:var(--saffron);border-radius:6px}
+  @media (min-width:980px){
+    .strip{display:grid;grid-template-columns:repeat(4,1fr);overflow:visible;padding:0;margin:0}
+  }
+  .scard{
+    flex:0 0 78%;scroll-snap-align:start;
+    background:var(--cream);color:var(--char);
+    border-radius:16px;padding:22px;
+    display:flex;flex-direction:column;gap:14px;
+    box-shadow:0 18px 28px -22px rgba(0,0,0,.5);
+    transition:transform .2s ease;
+  }
+  .scard:hover{transform:translateY(-3px) rotate(-.8deg)}
+  @media (min-width:980px){.scard{flex:initial}}
+  .scard .ico{
+    width:64px;height:64px;border-radius:14px;display:grid;place-items:center;
+    background:var(--saffron);color:var(--char);
+  }
+  .scard h3{font-family:var(--display);font-size:1.9rem;line-height:1;margin:0}
+  .scard p{margin:0;font-size:16px;color:#2a1a12}
+  .scard .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto}
+  .price{font-family:var(--display);font-size:1.6rem;color:var(--red)}
+  .heat{display:inline-flex;gap:2px;color:var(--red)}
+
+  /* ---------- The Vibe ---------- */
+  #vibe{
+    position:relative;
+    min-height:78vh;
+    display:grid;place-items:center;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(229,17,122,.35), transparent 55%),
+      radial-gradient(circle at 75% 65%, rgba(242,165,22,.45), transparent 55%),
+      radial-gradient(circle at 50% 50%, rgba(215,50,29,.6), transparent 70%),
+      var(--char);
+    overflow:hidden;color:var(--cream);
+    padding:120px 28px;
+  }
+  #vibe::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      radial-gradient(rgba(255,255,255,.08) 1px, transparent 1.5px),
+      radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.5px);
+    background-size:5px 5px, 9px 9px;
+    background-position:0 0, 2px 3px;
+    mix-blend-mode:overlay;pointer-events:none;
+  }
+  .garland{
+    position:absolute;left:0;right:0;display:flex;justify-content:space-around;
+    pointer-events:none;
+  }
+  .garland.top{top:18px}
+  .garland.bot{bottom:18px;transform:scaleY(-1)}
+  .marigold{
+    width:26px;height:26px;border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 50%, #ffd24a 0 25%, var(--saffron) 26% 55%, var(--red) 56% 100%);
+    box-shadow:0 0 0 2px rgba(26,15,10,.4);
+  }
+  .vibe-quote{
+    position:relative;z-index:2;text-align:center;max-width:18ch;margin:0 auto;
+  }
+  .vibe-quote .q{
+    font-family:var(--display);
+    font-size:clamp(3rem,8.5vw,7.5rem);line-height:.95;
+    color:var(--cream);
+    text-shadow:6px 6px 0 var(--red);
+  }
+  .vibe-quote .q .y{color:var(--saffron)}
+  .vibe-quote .q .m{color:var(--magenta)}
+  .vibe-quote .cred{
+    margin-top:18px;font-family:var(--script);font-size:clamp(20px,2.2vw,26px);color:var(--saffron);
+    transform:rotate(-2deg);display:inline-block;
+  }
+
+  /* ---------- Stories ---------- */
+  #stories{padding:110px 0 120px;background:var(--cream);background-image:var(--paper-noise);background-blend-mode:multiply}
+  .polas{
+    display:grid;grid-template-columns:1fr;gap:30px;
+    justify-items:center;
+  }
+  @media (min-width:760px){.polas{grid-template-columns:repeat(3,1fr);gap:20px}}
+  .pola{
+    background:#fffaf0;
+    padding:18px 18px 56px;
+    width:min(360px,100%);
+    box-shadow:
+      0 1px 0 rgba(0,0,0,.05),
+      0 22px 30px -22px rgba(0,0,0,.4),
+      0 4px 0 rgba(0,0,0,.06);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .pola:nth-child(1){transform:rotate(-4deg)}
+  .pola:nth-child(2){transform:rotate(2.5deg) translateY(14px)}
+  .pola:nth-child(3){transform:rotate(-1.8deg)}
+  .pola:hover{transform:rotate(0deg) translateY(-6px);box-shadow:0 30px 40px -22px rgba(0,0,0,.45)}
+  .pola .photo{
+    aspect-ratio:1/1;background:var(--saffron);border-radius:2px;position:relative;overflow:hidden;
+    display:grid;place-items:center;
+  }
+  .pola .photo svg{width:78%;height:78%}
+  .pola .quote{
+    font-family:var(--display);font-size:1.45rem;line-height:1.1;margin:18px 4px 6px;
+    color:var(--char);
+  }
+  .pola .by{
+    font-family:var(--script);font-size:24px;color:var(--red);margin:0 4px;
+    transform:rotate(-2deg);display:inline-block;
+  }
+  .pola .tape{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%) rotate(-3deg);
+    width:90px;height:22px;background:rgba(127,176,105,.55);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+  }
+  .pola{position:relative}
+
+  /* ---------- Find Us ---------- */
+  #find{padding:110px 0 100px;background:var(--saffron);position:relative;overflow:hidden}
+  #find::before{content:"";position:absolute;inset:0;background-image:var(--paper-noise);mix-blend-mode:multiply;opacity:.55;pointer-events:none}
+  .find-grid{display:grid;grid-template-columns:1fr;gap:40px;align-items:start}
+  @media (min-width:920px){.find-grid{grid-template-columns:.95fr 1.05fr;gap:60px}}
+  .find-card{
+    background:var(--char);color:var(--cream);
+    padding:36px 32px;border-radius:18px;
+    box-shadow:10px 10px 0 var(--red);
+  }
+  .find-card .flex{font-family:var(--display);font-size:clamp(1.6rem,3vw,2.2rem);line-height:1;color:var(--saffron)}
+  .find-card .flex .late{color:var(--magenta)}
+  .find-card h3{font-family:var(--display);font-size:1.4rem;margin:22px 0 8px;color:var(--cream);letter-spacing:.02em}
+  .find-card address{font-style:normal;font-size:18px;line-height:1.5}
+  .hours{width:100%;border-collapse:collapse;margin-top:6px;font-size:16px}
+  .hours td{padding:6px 0;border-bottom:1px dashed rgba(247,237,214,.18)}
+  .hours td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .hours tr.now td{color:var(--mint);font-weight:700}
+  .pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+
+  .map{
+    position:relative;aspect-ratio:1/1;border-radius:18px;overflow:hidden;
+    background:var(--cream);
+    box-shadow:0 20px 30px -22px rgba(0,0,0,.45);
+  }
+  .map svg{width:100%;height:100%;display:block}
+  .map .pinlabel{
+    position:absolute;left:50%;top:38%;transform:translate(-50%,-100%) rotate(-3deg);
+    background:var(--char);color:var(--cream);
+    padding:8px 12px;border-radius:8px;font-family:var(--display);font-size:15px;letter-spacing:.02em;
+    box-shadow:0 6px 14px -8px rgba(0,0,0,.4);
+    white-space:nowrap;
+  }
+  .map .pinlabel::after{
+    content:"";position:absolute;left:50%;bottom:-6px;transform:translateX(-50%) rotate(45deg);
+    width:12px;height:12px;background:var(--char);
+  }
+
+  /* ---------- Footer ---------- */
+  footer{
+    background:var(--char);color:var(--cream);
+    padding:64px 0 36px;position:relative;overflow:hidden;
+  }
+  footer::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      radial-gradient(rgba(247,237,214,.06) 1px, transparent 1.5px);
+    background-size:5px 5px;mix-blend-mode:overlay;pointer-events:none;
+  }
+  .foot-grid{display:grid;grid-template-columns:1fr;gap:30px;align-items:end}
+  @media (min-width:760px){.foot-grid{grid-template-columns:1.4fr 1fr 1fr;gap:40px}}
+  .foot-mark{font-family:var(--display);font-size:clamp(2.4rem,5vw,3.6rem);line-height:.95}
+  .foot-mark .em{color:var(--red)}
+  .foot-mark .ti{color:var(--saffron)}
+  .foot-mark .pi{color:var(--magenta)}
+  .foot h4{font-family:var(--display);font-size:1.1rem;margin:0 0 10px;color:var(--saffron);letter-spacing:.04em;text-transform:uppercase}
+  .foot ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:16px}
+  .foot a:hover{color:var(--saffron)}
+  .foot-bottom{
+    margin-top:48px;padding-top:22px;border-top:1px dashed rgba(247,237,214,.18);
+    display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;
+    font-size:14px;color:rgba(247,237,214,.7);
+  }
+  .closing{font-family:var(--script);font-size:22px;color:var(--saffron);transform:rotate(-2deg);display:inline-block}
+
+  /* ---------- Reveal motion ---------- */
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease, transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){
+    .pizza,.sticker.s1 .burst,.sticker.s1{animation:none !important}
+    .reveal{opacity:1;transform:none;transition:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* ---------- Tiny utilities ---------- */
+  .nowrap{white-space:nowrap}
+  .show-md{display:none}
+  @media (min-width:820px){.show-md{display:inline-flex}}
+</style>
+</head>
+<body>
+
+<!-- ===== Top Bar ===== -->
+<header class="topbar" id="topbar">
+  <a class="wordmark" href="#top" aria-label="Bollywood Pizza home">
+    <span class="dot" aria-hidden="true"></span>
+    Bollywood<em>Pizza</em>
+  </a>
+  <a class="phone show-md" href="tel:+14155550199" aria-label="Call the kitchen">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72A2 2 0 0 1 22 16.92Z"/></svg>
+    (415) 555-0199
+  </a>
+  <nav aria-label="Primary">
+    <a href="#pizzas">Menu</a>
+    <a href="#find">Find Us</a>
+    <a class="cta-pill red" href="#find">Order Pickup
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
+  </nav>
+</header>
+
+<!-- ===== Hero ===== -->
+<main id="top">
+<section class="hero" aria-labelledby="heroTitle">
+  <div class="sticker s1" aria-hidden="true">
+    <span class="burst"></span>
+    OPEN<br>TILL<br>4 AM!
+  </div>
+
+  <div class="hero-inner">
+    <div>
+      <span class="eyebrow"><span class="blink"></span> SoMa &middot; San Francisco</span>
+      <h1 id="heroTitle" class="display h1">
+        <span class="l1">A festival</span>
+        <span class="l2">of taste<span class="amp">&amp;</span></span>
+        <span class="l3">every slice.</span>
+      </h1>
+      <p class="sub">Authentic Indian spice meets classic pizza, born and raised in San Francisco. <b>Bold. Juicy. Messy.</b> In all the right ways.</p>
+
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#pizzas">Feed Me
+          <span class="arr">→</span>
+        </a>
+        <a class="btn btn-ghost" href="#find">Order Pickup
+          <span class="arr">→</span>
+        </a>
+      </div>
+
+      <div class="rating" role="group" aria-label="Rated 4.9 out of 5 from 39 reviews">
+        <span class="stars" aria-hidden="true">
+          <!-- 5 hand-drawn stars -->
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.3 9l6.7.3-5.3 4.1 1.8 6.6L12 16.7 6.5 20l1.8-6.6L3 9.3 9.7 9z" fill="#1A0F0A" stroke="#1A0F0A" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.3 9l6.7.3-5.3 4.1 1.8 6.6L12 16.7 6.5 20l1.8-6.6L3 9.3 9.7 9z" fill="#1A0F0A" stroke="#1A0F0A" stroke-width="1.4" stroke-linejoin="round" transform="rotate(-4 12 12)"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.3 9l6.7.3-5.3 4.1 1.8 6.6L12 16.7 6.5 20l1.8-6.6L3 9.3 9.7 9z" fill="#1A0F0A" stroke="#1A0F0A" stroke-width="1.4" stroke-linejoin="round" transform="rotate(3 12 12)"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.3 9l6.7.3-5.3 4.1 1.8 6.6L12 16.7 6.5 20l1.8-6.6L3 9.3 9.7 9z" fill="#1A0F0A" stroke="#1A0F0A" stroke-width="1.4" stroke-linejoin="round" transform="rotate(-2 12 12)"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6 14.3 9l6.7.3-5.3 4.1 1.8 6.6L12 16.7 6.5 20l1.8-6.6L3 9.3 9.7 9z" fill="#1A0F0A" stroke="#1A0F0A" stroke-width="1.4" stroke-linejoin="round" transform="rotate(5 12 12)"/></svg>
+        </span>
+        <span><b>4.9</b></span>
+        <span class="sep">·</span>
+        <span>39 reviews</span>
+        <span class="sep">·</span>
+        <span>SoMa, SF</span>
+      </div>
+    </div>
+
+    <!-- Hero pizza art -->
+    <div class="hero-art" aria-hidden="true">
+      <svg class="pizza" viewBox="0 0 600 600" role="img">
+        <defs>
+          <radialGradient id="crust" cx="50%" cy="50%" r="50%">
+            <stop offset="78%" stop-color="#E29A3A"/>
+            <stop offset="92%" stop-color="#B26A1E"/>
+            <stop offset="100%" stop-color="#7A3F11"/>
+          </radialGradient>
+          <radialGradient id="sauce" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E04826"/>
+            <stop offset="80%" stop-color="#B22411"/>
+            <stop offset="100%" stop-color="#7E1A0A"/>
+          </radialGradient>
+          <radialGradient id="cheese" cx="50%" cy="40%" r="55%">
+            <stop offset="0%" stop-color="#FFE9A3"/>
+            <stop offset="100%" stop-color="#F2C25A"/>
+          </radialGradient>
+          <pattern id="grain" width="3" height="3" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r=".4" fill="rgba(0,0,0,.06)"/>
+          </pattern>
+        </defs>
+        <!-- shadow -->
+        <ellipse cx="300" cy="540" rx="240" ry="22" fill="rgba(0,0,0,.18)"/>
+        <!-- crust -->
+        <circle cx="300" cy="300" r="280" fill="url(#crust)"/>
+        <!-- bubbles on crust -->
+        <g fill="#8e4f1a" opacity=".55">
+          <circle cx="120" cy="220" r="8"/><circle cx="92" cy="320" r="6"/>
+          <circle cx="135" cy="430" r="9"/><circle cx="265" cy="535" r="7"/>
+          <circle cx="430" cy="495" r="9"/><circle cx="520" cy="380" r="7"/>
+          <circle cx="500" cy="220" r="9"/><circle cx="380" cy="80" r="7"/>
+          <circle cx="215" cy="75" r="9"/>
+        </g>
+        <!-- sauce -->
+        <circle cx="300" cy="300" r="232" fill="url(#sauce)"/>
+        <!-- cheese splotches -->
+        <g fill="url(#cheese)" opacity=".95">
+          <path d="M180 200 q40 -30 90 -10 q40 10 30 60 q-10 40 -60 35 q-70 -10 -60 -85z"/>
+          <path d="M330 180 q50 -10 80 30 q30 40 -10 80 q-50 50 -100 0 q-40 -40 30 -110z"/>
+          <path d="M200 360 q60 -20 110 20 q40 40 0 80 q-60 50 -120 -10 q-40 -50 10 -90z"/>
+          <path d="M390 330 q40 10 50 60 q10 50 -40 70 q-60 25 -80 -30 q-20 -55 70 -100z"/>
+        </g>
+        <!-- paneer cubes -->
+        <g>
+          <rect x="220" y="220" width="22" height="22" rx="3" fill="#fbf3dd" transform="rotate(12 231 231)"/>
+          <rect x="350" y="240" width="20" height="20" rx="3" fill="#fbf3dd" transform="rotate(-8 360 250)"/>
+          <rect x="270" y="330" width="24" height="24" rx="3" fill="#fbf3dd" transform="rotate(22 282 342)"/>
+          <rect x="380" y="380" width="20" height="20" rx="3" fill="#fbf3dd" transform="rotate(-14 390 390)"/>
+          <rect x="170" y="300" width="22" height="22" rx="3" fill="#fbf3dd" transform="rotate(6 181 311)"/>
+          <rect x="320" y="410" width="22" height="22" rx="3" fill="#fbf3dd" transform="rotate(-22 331 421)"/>
+        </g>
+        <!-- chicken/tikka bits -->
+        <g fill="#C44A1E">
+          <ellipse cx="245" cy="270" rx="14" ry="9" transform="rotate(20 245 270)"/>
+          <ellipse cx="335" cy="305" rx="16" ry="10" transform="rotate(-12 335 305)"/>
+          <ellipse cx="295" cy="395" rx="14" ry="9" transform="rotate(35 295 395)"/>
+          <ellipse cx="410" cy="285" rx="13" ry="8" transform="rotate(8 410 285)"/>
+          <ellipse cx="200" cy="370" rx="14" ry="9" transform="rotate(-25 200 370)"/>
+        </g>
+        <!-- red onion slivers -->
+        <g stroke="#7a2f8a" stroke-width="3" fill="none" opacity=".85">
+          <path d="M210 250 q15 -10 30 0"/>
+          <path d="M370 360 q15 -10 30 0"/>
+          <path d="M290 215 q15 -10 30 0"/>
+          <path d="M255 410 q15 -10 30 0"/>
+          <path d="M410 220 q15 -10 30 0"/>
+        </g>
+        <!-- cilantro -->
+        <g fill="#7FB069">
+          <path d="M180 250 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M310 240 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M380 320 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M250 340 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M360 420 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M220 410 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M150 340 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M430 350 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M295 290 q10 -14 22 -6 q-2 14 -22 6z"/>
+          <path d="M345 265 q10 -14 22 -6 q-2 14 -22 6z"/>
+        </g>
+        <!-- grain overlay -->
+        <circle cx="300" cy="300" r="280" fill="url(#grain)"/>
+        <!-- chromatic shift fringe -->
+        <circle cx="300" cy="300" r="280" fill="none" stroke="rgba(229,17,122,.18)" stroke-width="2"/>
+        <circle cx="300" cy="300" r="276" fill="none" stroke="rgba(127,176,105,.14)" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ===== The Pizzas ===== -->
+<section id="pizzas" aria-labelledby="pizzasTitle">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2 id="pizzasTitle" class="sec-title">
+        The pizzas we're <span class="red">famous</span> for
+        <span class="ornament" aria-hidden="true">❋</span>
+      </h2>
+      <span class="sec-kicker">— ordered by the regulars, twice a week</span>
+    </div>
+
+    <div class="pizza-grid">
+
+      <!-- Card 1 -->
+      <article class="pcard reveal">
+        <div class="pframe">
+          <div class="pbadge">FAN<br>FAVE</div>
+          <svg viewBox="0 0 400 400" role="img" aria-label="Overhead shot of a butter chicken pizza, glossy with sauce and dusted with cilantro.">
+            <defs>
+              <radialGradient id="c1c" cx="50%" cy="50%" r="50%">
+                <stop offset="78%" stop-color="#E29A3A"/><stop offset="100%" stop-color="#8a4818"/>
+              </radialGradient>
+              <radialGradient id="c1s" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#F2A26A"/><stop offset="80%" stop-color="#C46324"/><stop offset="100%" stop-color="#8d3e10"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="400" fill="#2a160d"/>
+            <circle cx="200" cy="200" r="185" fill="url(#c1c)"/>
+            <circle cx="200" cy="200" r="155" fill="url(#c1s)"/>
+            <g fill="#fbf3dd">
+              <rect x="140" y="150" width="18" height="18" rx="3" transform="rotate(10 149 159)"/>
+              <rect x="220" y="160" width="16" height="16" rx="3" transform="rotate(-12 228 168)"/>
+              <rect x="180" y="220" width="20" height="20" rx="3" transform="rotate(18 190 230)"/>
+              <rect x="245" y="225" width="16" height="16" rx="3" transform="rotate(-8 253 233)"/>
+            </g>
+            <g fill="#A93D14">
+              <ellipse cx="170" cy="180" rx="14" ry="9" transform="rotate(15 170 180)"/>
+              <ellipse cx="235" cy="200" rx="16" ry="10" transform="rotate(-10 235 200)"/>
+              <ellipse cx="200" cy="250" rx="14" ry="9" transform="rotate(28 200 250)"/>
+              <ellipse cx="155" cy="230" rx="13" ry="8" transform="rotate(-20 155 230)"/>
+            </g>
+            <g fill="#7FB069">
+              <path d="M150 200 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M255 175 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M225 260 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M170 270 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M270 230 q8 -12 18 -5 q-2 12 -18 5z"/>
+            </g>
+            <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(229,17,122,.15)" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="pmeta">
+          <h3 class="pname">Butter Chicken</h3>
+          <p class="pdesc">The pizza your nani would steal a slice of. Creamy, smoky, dangerous.</p>
+          <span class="ptag">Mild heat 🌶</span>
+        </div>
+      </article>
+
+      <!-- Card 2 -->
+      <article class="pcard reveal">
+        <div class="pframe">
+          <div class="pbadge mag">MUST<br>TRY</div>
+          <svg viewBox="0 0 400 400" role="img" aria-label="Paneer tikka pizza loaded with cubes of marinated cheese, peppers, and fresh cilantro.">
+            <defs>
+              <radialGradient id="c2c" cx="50%" cy="50%" r="50%">
+                <stop offset="78%" stop-color="#E29A3A"/><stop offset="100%" stop-color="#8a4818"/>
+              </radialGradient>
+              <radialGradient id="c2s" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#F2C25A"/><stop offset="100%" stop-color="#C58319"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="400" fill="#2a160d"/>
+            <circle cx="200" cy="200" r="185" fill="url(#c2c)"/>
+            <circle cx="200" cy="200" r="155" fill="url(#c2s)"/>
+            <!-- lots of paneer -->
+            <g fill="#fbf3dd">
+              <rect x="140" y="140" width="26" height="26" rx="3" transform="rotate(8 153 153)"/>
+              <rect x="200" y="135" width="24" height="24" rx="3" transform="rotate(-14 212 147)"/>
+              <rect x="245" y="165" width="22" height="22" rx="3" transform="rotate(20 256 176)"/>
+              <rect x="155" y="200" width="22" height="22" rx="3" transform="rotate(-6 166 211)"/>
+              <rect x="220" y="220" width="26" height="26" rx="3" transform="rotate(16 233 233)"/>
+              <rect x="170" y="250" width="22" height="22" rx="3" transform="rotate(-20 181 261)"/>
+              <rect x="255" y="245" width="20" height="20" rx="3" transform="rotate(28 265 255)"/>
+            </g>
+            <!-- peppers -->
+            <g fill="#7FB069">
+              <path d="M180 175 q22 -10 30 8 q-22 10 -30 -8z"/>
+              <path d="M225 200 q22 -10 30 8 q-22 10 -30 -8z"/>
+              <path d="M150 235 q22 -10 30 8 q-22 10 -30 -8z"/>
+            </g>
+            <g fill="#D7321D">
+              <path d="M200 180 q18 -10 26 6 q-18 10 -26 -6z"/>
+              <path d="M260 220 q18 -10 26 6 q-18 10 -26 -6z"/>
+              <path d="M150 175 q18 -10 26 6 q-18 10 -26 -6z"/>
+              <path d="M210 270 q18 -10 26 6 q-18 10 -26 -6z"/>
+            </g>
+            <g fill="#5a8c45">
+              <path d="M140 200 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M275 200 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M210 290 q8 -12 18 -5 q-2 12 -18 5z"/>
+            </g>
+            <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(127,176,105,.18)" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="pmeta">
+          <h3 class="pname">Paneer Tikka</h3>
+          <p class="pdesc">Charred cubes, smoky char, the green that makes you feel virtuous.</p>
+          <span class="ptag green">Veg · Medium 🌶🌶</span>
+        </div>
+      </article>
+
+      <!-- Card 3 -->
+      <article class="pcard reveal">
+        <div class="pframe">
+          <div class="pbadge red">SPICY!</div>
+          <svg viewBox="0 0 400 400" role="img" aria-label="Tandoori chicken pizza with deep red marinade, onion ribbons and bright green chilies.">
+            <defs>
+              <radialGradient id="c3c" cx="50%" cy="50%" r="50%">
+                <stop offset="78%" stop-color="#D88c30"/><stop offset="100%" stop-color="#7a3f12"/>
+              </radialGradient>
+              <radialGradient id="c3s" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#E04826"/><stop offset="100%" stop-color="#7E1A0A"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="400" fill="#2a160d"/>
+            <circle cx="200" cy="200" r="185" fill="url(#c3c)"/>
+            <circle cx="200" cy="200" r="155" fill="url(#c3s)"/>
+            <g fill="#A03014">
+              <ellipse cx="160" cy="170" rx="20" ry="13" transform="rotate(15 160 170)"/>
+              <ellipse cx="240" cy="180" rx="22" ry="14" transform="rotate(-10 240 180)"/>
+              <ellipse cx="200" cy="225" rx="20" ry="13" transform="rotate(20 200 225)"/>
+              <ellipse cx="160" cy="245" rx="18" ry="12" transform="rotate(-18 160 245)"/>
+              <ellipse cx="245" cy="245" rx="22" ry="14" transform="rotate(8 245 245)"/>
+            </g>
+            <g stroke="#fbf3dd" stroke-width="4" fill="none" opacity=".95">
+              <path d="M150 200 q15 -10 30 0"/>
+              <path d="M210 165 q15 -10 30 0"/>
+              <path d="M250 215 q15 -10 30 0"/>
+              <path d="M185 270 q15 -10 30 0"/>
+            </g>
+            <g fill="#7FB069">
+              <path d="M170 220 q12 -16 22 -2 q-4 14 -22 2z"/>
+              <path d="M230 200 q12 -16 22 -2 q-4 14 -22 2z"/>
+              <path d="M215 255 q12 -16 22 -2 q-4 14 -22 2z"/>
+              <path d="M150 195 q12 -16 22 -2 q-4 14 -22 2z"/>
+            </g>
+            <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(229,17,122,.2)" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="pmeta">
+          <h3 class="pname">Tandoori Chicken</h3>
+          <p class="pdesc">Clay-oven char, big heat, zero apologies. Bring water. Or chai.</p>
+          <span class="ptag magenta">Spicy 🌶🌶🌶</span>
+        </div>
+      </article>
+
+      <!-- Card 4 -->
+      <article class="pcard reveal">
+        <div class="pframe">
+          <div class="pbadge">NEW!</div>
+          <svg viewBox="0 0 400 400" role="img" aria-label="Shahi paneer pizza, royal and creamy, with golden cubes and a swirl of saffron sauce.">
+            <defs>
+              <radialGradient id="c4c" cx="50%" cy="50%" r="50%">
+                <stop offset="78%" stop-color="#E29A3A"/><stop offset="100%" stop-color="#8a4818"/>
+              </radialGradient>
+              <radialGradient id="c4s" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#FFD06B"/><stop offset="100%" stop-color="#C8801C"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="400" fill="#2a160d"/>
+            <circle cx="200" cy="200" r="185" fill="url(#c4c)"/>
+            <circle cx="200" cy="200" r="155" fill="url(#c4s)"/>
+            <!-- creamy swirl -->
+            <path d="M120 200 q40 -60 90 -40 q60 25 30 80 q-30 50 -90 30 q-50 -20 -30 -70z" fill="#fbf3dd" opacity=".75"/>
+            <g fill="#fff7df">
+              <rect x="160" y="160" width="22" height="22" rx="3" transform="rotate(10 171 171)"/>
+              <rect x="220" y="170" width="20" height="20" rx="3" transform="rotate(-8 230 180)"/>
+              <rect x="190" y="220" width="24" height="24" rx="3" transform="rotate(18 202 232)"/>
+              <rect x="240" y="230" width="20" height="20" rx="3" transform="rotate(-14 250 240)"/>
+              <rect x="155" y="240" width="22" height="22" rx="3" transform="rotate(6 166 251)"/>
+            </g>
+            <g fill="#D7321D" opacity=".85">
+              <circle cx="170" cy="200" r="4"/><circle cx="230" cy="210" r="4"/>
+              <circle cx="200" cy="260" r="4"/><circle cx="260" cy="190" r="4"/>
+            </g>
+            <g fill="#7FB069">
+              <path d="M160 195 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M250 220 q8 -12 18 -5 q-2 12 -18 5z"/>
+              <path d="M210 270 q8 -12 18 -5 q-2 12 -18 5z"/>
+            </g>
+            <circle cx="200" cy="200" r="185" fill="none" stroke="rgba(127,176,105,.18)" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="pmeta">
+          <h3 class="pname">Shahi Paneer</h3>
+          <p class="pdesc">Royal, rich, ridiculous. Cashew cream sauce that will ruin you for lesser pizzas.</p>
+          <span class="ptag green">Veg · Mild 🌶</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Beyond Pizza ===== -->
+<section id="beyond" aria-labelledby="beyondTitle">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2 id="beyondTitle" class="sec-title">
+        Beyond <span class="red">pizza</span> —<br>the supporting cast
+        <span class="ornament" aria-hidden="true">✺</span>
+      </h2>
+      <span class="sec-kicker">— equally loud, slightly handheld</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="strip" role="list">
+
+      <article class="scard" role="listitem">
+        <div class="ico" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13c0-4 3-7 7-7s7 3 7 7v3a3 3 0 0 1-3 3h-8a3 3 0 0 1-3-3z"/><path d="M9 13l-3 6M15 13l3 6"/></svg>
+        </div>
+        <h3>Masala Wings</h3>
+        <p>Sauce-slick, glossy, the kind that demand two napkins and a wet wipe.</p>
+        <div class="row">
+          <span class="price">$13</span>
+          <span class="heat" aria-label="Medium heat">🌶🌶</span>
+        </div>
+      </article>
+
+      <article class="scard" role="listitem">
+        <div class="ico" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12l-1 4H7zM7 8l1 12h8l1-12"/><path d="M9 12v4M12 12v4M15 12v4"/></svg>
+        </div>
+        <h3>Masala Fries</h3>
+        <p>Crispy, chaat-spiced, gone before they hit the table. Truly.</p>
+        <div class="row">
+          <span class="price">$8</span>
+          <span class="heat" aria-label="Mild heat">🌶</span>
+        </div>
+      </article>
+
+      <article class="scard" role="listitem">
+        <div class="ico" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12c1 3 7 3 8 0M9 9h.01M15 9h.01"/></svg>
+        </div>
+        <h3>Garlic Naan Knots</h3>
+        <p>Buttery, blistered, suspiciously addictive. Order two. We dare you.</p>
+        <div class="row">
+          <span class="price">$7</span>
+          <span class="heat" aria-label="No heat">—</span>
+        </div>
+      </article>
+
+      <article class="scard" role="listitem">
+        <div class="ico" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10h12v4a6 6 0 0 1-12 0z"/><path d="M18 10h2a2 2 0 0 1 0 4h-2M8 4c0 2-2 2-2 4M12 4c0 2-2 2-2 4"/></svg>
+        </div>
+        <h3>Masala Chai</h3>
+        <p>Boiled, not steeped. Sweet, spiced, served scalding. The way it should be.</p>
+        <div class="row">
+          <span class="price">$4</span>
+          <span class="heat" aria-label="Warm">♨︎</span>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== The Vibe ===== -->
+<section id="vibe" aria-labelledby="vibeTitle">
+  <div class="garland top" aria-hidden="true">
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+  </div>
+
+  <blockquote class="vibe-quote reveal">
+    <p id="vibeTitle" class="q display">
+      <span>Bold.</span> <span class="y">Juicy.</span> <span class="m">Messy.</span><br>
+      <span>In all the right ways.</span>
+    </p>
+    <span class="cred">— the house philosophy</span>
+  </blockquote>
+
+  <div class="garland bot" aria-hidden="true">
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+    <span class="marigold"></span><span class="marigold"></span><span class="marigold"></span>
+  </div>
+</section>
+
+<!-- ===== Stories ===== -->
+<section id="stories" aria-labelledby="storiesTitle">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2 id="storiesTitle" class="sec-title">
+        Stories that <span class="red">warm</span> our hearts
+        <span class="ornament" aria-hidden="true">❉</span>
+      </h2>
+      <span class="sec-kicker">— pulled straight off the receipts</span>
+    </div>
+
+    <div class="polas">
+
+      <figure class="pola reveal">
+        <span class="tape" aria-hidden="true"></span>
+        <div class="photo" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="#D7321D"/>
+            <circle cx="50" cy="50" r="36" fill="#F2C25A"/>
+            <g fill="#fbf3dd">
+              <rect x="36" y="36" width="9" height="9" rx="1.5" transform="rotate(10 40 40)"/>
+              <rect x="55" y="40" width="8" height="8" rx="1.5" transform="rotate(-10 59 44)"/>
+              <rect x="44" y="56" width="9" height="9" rx="1.5" transform="rotate(18 48 60)"/>
+            </g>
+            <g fill="#7FB069">
+              <path d="M40 50 q4 -6 9 -2 q-1 6 -9 2z"/>
+              <path d="M58 55 q4 -6 9 -2 q-1 6 -9 2z"/>
+            </g>
+          </svg>
+        </div>
+        <blockquote class="quote">"I drove across the bridge at 1 AM for this. Worth every minute."</blockquote>
+        <figcaption class="by">— a regular</figcaption>
+      </figure>
+
+      <figure class="pola reveal">
+        <span class="tape" aria-hidden="true"></span>
+        <div class="photo" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <rect width="100" height="100" fill="#7FB069"/>
+            <circle cx="50" cy="50" r="36" fill="#F2A516"/>
+            <g fill="#D7321D">
+              <ellipse cx="42" cy="44" rx="6" ry="4" transform="rotate(15 42 44)"/>
+              <ellipse cx="58" cy="50" rx="7" ry="4" transform="rotate(-10 58 50)"/>
+              <ellipse cx="50" cy="62" rx="6" ry="4" transform="rotate(20 50 62)"/>
+            </g>
+            <g fill="#1A0F0A" opacity=".6">
+              <circle cx="45" cy="48" r="1.5"/><circle cx="56" cy="52" r="1.5"/><circle cx="50" cy="60" r="1.5"/>
+            </g>
+          </svg>
+        </div>
+        <blockquote class="quote">"The butter chicken pizza ruined every other pizza for me. No regrets."</blockquote>
+        <figcaption class="by">— a regular</figcaption>
+      </figure>
+
+      <figure class="pola reveal">
+        <span class="tape" aria-hidden="true"></span>
+        <div class="photo" aria-hidden="true">
+          <svg viewBox="0 0 100 100">
+            <rect width="100" height="100" fill="#E5117A"/>
+            <circle cx="50" cy="52" r="34" fill="#F7EDD6"/>
+            <g stroke="#1A0F0A" stroke-width="2" fill="none" stroke-linecap="round">
+              <path d="M36 50 q14 14 28 0"/>
+              <circle cx="40" cy="44" r="1.6" fill="#1A0F0A"/>
+              <circle cx="60" cy="44" r="1.6" fill="#1A0F0A"/>
+            </g>
+          </svg>
+        </div>
+        <blockquote class="quote">"My kids ask for Bollywood Pizza by name. I've lost the war. Happily."</blockquote>
+        <figcaption class="by">— a regular</figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
+<!-- ===== Find Us ===== -->
+<section id="find" aria-labelledby="findTitle">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2 id="findTitle" class="sec-title">
+        Find us in <span class="red">SoMa</span>
+        <span class="ornament" aria-hidden="true">✦</span>
+      </h2>
+      <span class="sec-kicker">— or call the kitchen</span>
+    </div>
+
+    <div class="find-grid">
+      <div class="find-card reveal">
+        <p class="flex"><span class="late">Open till 4 AM</span> daily.<br>Yes, really.</p>
+
+        <h3>Where</h3>
+        <address>
+          215 Fremont St #2B<br>
+          San Francisco, CA 94105<br>
+          <span style="opacity:.7">SoMa neighborhood</span>
+        </address>
+
+        <h3>Hours</h3>
+        <table class="hours" aria-label="Opening hours">
+          <tbody>
+            <tr class="now"><td>Today</td><td>10 AM — 4 AM</td></tr>
+            <tr><td>Mon — Thu</td><td>10 AM — 4 AM</td></tr>
+            <tr><td>Fri — Sat</td><td>10 AM — 4 AM</td></tr>
+            <tr><td>Sunday</td><td>10 AM — 4 AM</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Call the Kitchen</h3>
+        <a href="tel:+14155550199" style="font-family:var(--display);font-size:1.8rem;color:var(--saffron)">(415) 555-0199</a>
+
+        <div class="pill-row">
+          <a class="btn btn-primary" style="background:var(--red);box-shadow:6px 6px 0 var(--saffron)" href="https://maps.google.com/?q=215+Fremont+St+San+Francisco" target="_blank" rel="noopener">Take Me There <span class="arr">→</span></a>
+          <a class="btn btn-ghost" style="background:var(--saffron);box-shadow:6px 6px 0 var(--cream);color:var(--char)" href="tel:+14155550199">Call the Kitchen <span class="arr">→</span></a>
+        </div>
+      </div>
+
+      <div class="map reveal" aria-label="Stylized map of SoMa, San Francisco showing Bollywood Pizza on Fremont Street." role="img">
+        <svg viewBox="0 0 400 400">
+          <defs>
+            <pattern id="mapgrain" width="3" height="3" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r=".4" fill="rgba(26,15,10,.05)"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="400" fill="#F7EDD6"/>
+          <!-- Bay water -->
+          <path d="M0 0 L400 0 L400 130 Q300 160 220 130 Q140 100 0 150 Z" fill="#7FB069" opacity=".35"/>
+          <text x="320" y="60" font-family="Georgia,serif" font-style="italic" font-size="16" fill="#5a8c45" opacity=".9">SF Bay</text>
+
+          <!-- Streets -->
+          <g stroke="#1A0F0A" stroke-width="3" opacity=".55">
+            <line x1="0" y1="200" x2="400" y2="180"/>
+            <line x1="0" y1="260" x2="400" y2="240"/>
+            <line x1="0" y1="320" x2="400" y2="300"/>
+          </g>
+          <g stroke="#1A0F0A" stroke-width="3" opacity=".55">
+            <line x1="120" y1="0" x2="160" y2="400"/>
+            <line x1="220" y1="0" x2="260" y2="400"/>
+            <line x1="320" y1="0" x2="360" y2="400"/>
+          </g>
+          <!-- Highway -->
+          <path d="M0 360 Q100 320 200 340 Q300 360 400 320" stroke="#D7321D" stroke-width="6" fill="none" opacity=".7"/>
+          <text x="260" y="380" font-family="Georgia,serif" font-style="italic" font-size="13" fill="#7E1A0A">I-80</text>
+
+          <!-- Street labels -->
+          <text x="20" y="195" font-family="Georgia,serif" font-size="12" fill="#1A0F0A" opacity=".7">Mission St</text>
+          <text x="20" y="255" font-family="Georgia,serif" font-size="12" fill="#1A0F0A" opacity=".7">Howard St</text>
+          <text x="20" y="315" font-family="Georgia,serif" font-size="12" fill="#1A0F0A" opacity=".7">Folsom St</text>
+          <text x="170" y="20" font-family="Georgia,serif" font-size="12" fill="#1A0F0A" opacity=".7" transform="rotate(72 170 20)">1st St</text>
+          <text x="270" y="20" font-family="Georgia,serif" font-size="12" fill="#1A0F0A" opacity=".7" transform="rotate(72 270 20)">Fremont St</text>
+
+          <!-- Blocks -->
+          <g fill="#F2A516" opacity=".25">
+            <rect x="160" y="180" width="60" height="60"/>
+            <rect x="260" y="180" width="60" height="60"/>
+            <rect x="160" y="240" width="60" height="60"/>
+            <rect x="260" y="240" width="60" height="60"/>
+          </g>
+
+          <!-- Pin -->
+          <g transform="translate(255 220)">
+            <ellipse cx="0" cy="22" rx="14" ry="4" fill="rgba(0,0,0,.25)"/>
+            <path d="M0 -28 C-16 -28 -22 -14 -22 -4 C-22 10 0 22 0 22 C0 22 22 10 22 -4 C22 -14 16 -28 0 -28Z" fill="#D7321D" stroke="#1A0F0A" stroke-width="2"/>
+            <circle cx="0" cy="-8" r="7" fill="#F2A516"/>
+          </g>
+
+          <!-- Grain -->
+          <rect width="400" height="400" fill="url(#mapgrain)"/>
+        </svg>
+        <span class="pinlabel">Bollywood Pizza · 215 Fremont</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== Footer ===== -->
+<footer aria-labelledby="footTitle">
+  <div class="wrap foot">
+    <div class="foot-grid">
+      <div>
+        <h2 id="footTitle" class="foot-mark display">
+          Bollywood<span class="em">·</span><br>
+          <span class="ti">Piz</span><span class="pi">za</span>
+        </h2>
+        <p class="closing">Made with masala and love in SoMa.</p>
+      </div>
+
+      <div>
+        <h4>Visit</h4>
+        <ul>
+          <li>215 Fremont St #2B</li>
+          <li>San Francisco, CA 94105</li>
+          <li>Open daily 10 AM — 4 AM</li>
+        </ul>
+      </div>
+
+      <div>
+        <h4>Stay loud</h4>
+        <ul>
+          <li><a href="tel:+14155550199">(415) 555-0199</a></li>
+          <li><a href="#">bollywoodpizza.sf</a></li>
+          <li><a href="#">@bollywoodpizza_sf</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="foot-bottom">
+      <span>© 2026 Bollywood Pizza · All slices reserved.</span>
+      <span>A festival of taste — every slice.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Tiny, essential bits: topbar solidify + scroll-reveal. No frameworks.
+  (function(){
+    var bar = document.getElementById('topbar');
+    var onScroll = function(){
+      if (window.scrollY > 24) bar.classList.add('solid');
+      else bar.classList.remove('solid');
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, {passive:true});
+
+    if ('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        });
+      }, {rootMargin:'0px 0px -10% 0px', threshold:0.05});
+      document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
+    } else {
+      document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in')});
+    }
+  })();
+</script>
+</body>
+</html>
