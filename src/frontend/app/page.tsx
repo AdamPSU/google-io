@@ -30,7 +30,7 @@ export default function Home() {
     if (!q) return;
     setStatus({ kind: "loading" });
     try {
-      const res = await fetch(`${API_URL}/search`, {
+      const res = await fetch(`${API_URL}/api/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: q }),

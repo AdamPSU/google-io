@@ -207,7 +207,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/search", response_model=BusinessContext)
+@app.post("/api/search", response_model=BusinessContext)
 async def search(req: SearchRequest) -> BusinessContext:
     job_id = str(ULID())
 
