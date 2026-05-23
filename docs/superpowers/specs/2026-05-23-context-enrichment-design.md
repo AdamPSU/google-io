@@ -44,9 +44,9 @@ Tier 1 and Tier 2 are tightly coupled: Places returns the `websiteUri` that Tier
 6. If details has `websiteUri`:
    - `httpx.get(websiteUri, follow_redirects=True, timeout=10s)`
    - On 2xx: write `workspace/{job_id}/raw-html.html`. Continue to step 7.
-   - On any failure: log warning, skip steps 7 — return dossier with `website_uri` set, `raw_html_bytes: 0`, `site_distilled: null`.
-7. Distill the HTML via Gemini → `SiteDistilled` Pydantic object. Write `workspace/{job_id}/site-distilled.json`.
-8. Return enriched dossier JSON inline (including `site_distilled`).
+   - On any failure: `502 {"detail":"website fetch failed"}`. (No fallthrough.)
+7. If we have raw HTML, distill it via Gemini → `SiteDistilled`. Write `workspace/{job_id}/site-distilled.json`. On any failure (exception, non-conforming output): `502 {"detail":"site distillation failed"}`.
+8. Return the business context JSON inline (including `site_distilled`).
 
 ### Places field mask (Tier 1)
 
@@ -139,11 +139,11 @@ workspace/
 | `searchText` returns empty | `404 {"detail":"no results"}`. No workspace. |
 | `searchText` HTTP error | `502 {"detail":"places search failed"}`. |
 | `places:get` HTTP error | `502 {"detail":"places details failed"}`. |
-| Missing `websiteUri` in details | Skip fetch + distill. `raw_html_bytes: 0`, `site_distilled: null`. |
-| `httpx.get(websiteUri)` failure | Log warning, skip distill. Same null treatment. |
-| Gemini call fails or returns invalid schema | Log warning. `site_distilled: null`. `site-distilled.json` absent. Dossier still returns. |
+| Missing `websiteUri` in details | **One allowed degradation.** Skip fetch + distill. `raw_html_bytes: 0`, `site_distilled: null`. |
+| `httpx.get(websiteUri)` failure | `502 {"detail":"website fetch failed"}`. |
+| Gemini call fails or returns non-conforming output | `502 {"detail":"site distillation failed"}`. |
 
-Per CLAUDE.md "graceful degradation: any step except the LLM step may produce partial data." Here the LLM step is part of context-building (not the final generation), so we relax that rule and let the LLM step degrade gracefully too — losing site distillation does not invalidate the rest of the dossier.
+The context is either complete (Places + optional site signal if a website exists and both steps succeed) or the request fails outright. The only acceptable partial context is the "no website at all" case — that's a missing input at the source, not a broken pipeline. Failed jobs leave behind partial `workspace/{job_id}/` dirs for debugging.
 
 ### Dependencies
 
@@ -180,7 +180,7 @@ Estimated final `main.py`: ~200 lines. Acceptable per CLAUDE.md ("keep files in 
 
 - **Tier 3** (Instagram, menu, press) — dropped, not deferred.
 - **Tier 4** derived signals (palette extraction, sentiment) — dropped.
-- **Frontend "dossier" UI** — deferred.
+- **Frontend context-display UI** — deferred.
 - **Photo byte download** — deferred until generation slice.
 - **`brief.json` schema population from all sources** — deferred. `SiteDistilled` is the from-HTML subset; the unified `brief.json` belongs to a later spec when the generator is being built.
 - **Async / job queue / status endpoint** — YAGNI at current latency.
@@ -195,5 +195,5 @@ Estimated final `main.py`: ~200 lines. Acceptable per CLAUDE.md ("keep files in 
 5. Junk query → `404`, no workspace dir.
 6. Two back-to-back queries → two distinct ULID dirs.
 7. Business with no website → `website_uri: null`, `raw_html_bytes: 0`, `site_distilled: null`, only `places.json` on disk.
-8. Sabotage test: point a known good `websiteUri` to a deliberately broken URL (or 502-ing site) → log warning, dossier returns with `site_distilled: null`.
-9. Sabotage test: set `GEMINI_API_KEY=invalid_xxx` and rerun a good query → log warning, dossier returns with `site_distilled: null` and `places.json` + `raw-html.html` still present on disk.
+8. Sabotage test: point a known good `websiteUri` to a deliberately broken URL (or 502-ing site) → `502 {"detail":"website fetch failed"}`.
+9. Sabotage test: set `GEMINI_API_KEY=invalid_xxx` and rerun a good query → `502 {"detail":"site distillation failed"}`. `places.json` + `raw-html.html` still present on disk for debugging.
