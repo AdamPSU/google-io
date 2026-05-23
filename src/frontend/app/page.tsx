@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { BackgroundScene } from "@/components/ui/background-scene";
 import BounceCards from "@/components/ui/bounce-cards";
 import { PromptInputBox } from "@/components/ui/prompt-input-box";
 
@@ -227,53 +228,6 @@ export default function Home() {
         />
       </div>
     </div>
-  );
-}
-
-function BackgroundScene() {
-  return (
-    <>
-      <video
-        className="absolute inset-0 -z-30 h-full w-full object-cover motion-reduce:hidden"
-        src="/final-bg.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        disableRemotePlayback
-        aria-hidden
-        style={{ filter: "blur(3px) saturate(1.05)", transform: "scale(1.03)" }}
-      />
-      {/* Reduced-motion fallback */}
-      <div
-        className="absolute inset-0 -z-40 hidden motion-reduce:block"
-        aria-hidden
-        style={{ background: "#191512" }}
-      />
-      {/* Dark scrim — gives cream text consistent legibility across any video frame.
-         Slightly heavier at top/bottom, lighter in the middle, so the hero feels lit. */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-20"
-        aria-hidden
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(25,21,18,0.55) 0%, rgba(25,21,18,0.32) 35%, rgba(25,21,18,0.32) 65%, rgba(25,21,18,0.55) 100%)",
-        }}
-      />
-      {/* Film grain — subtle tactile noise across the whole stage. */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-10"
-        aria-hidden
-        style={{
-          opacity: 0.08,
-          mixBlendMode: "overlay",
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E\")",
-          backgroundSize: "220px 220px",
-        }}
-      />
-    </>
   );
 }
 

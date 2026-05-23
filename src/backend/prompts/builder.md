@@ -6,20 +6,21 @@ The card lives inside an iframe that scales from roughly 800×450 to 2560×1440.
 
 The card is the business in miniature. The user should feel the brand the instant it appears. Make distinctive choices, not safe ones.
 
-- **Typography carries the personality.** Pick real fonts that match the brand's tone — editorial serif, geometric display, characterful mono — never Inter, Helvetica, or "system-ui". Pair a display face for the name with a quieter body face for details.
+- **Bias toward playful and expressive.** This is a brand miniature, not a corporate site. Bold display type, oversized headlines, asymmetric layouts, color blocks, off-grid moments — pick choices that feel like the brand walked into the room. Bland minimalism is failure.
+- **Typography carries the personality.** Use the Google Fonts pair the brief names. Pull them in `<head>` via `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=NAME:wght@400;700&display=swap">` (preconnect optional, skip for speed). NEVER fall back to Inter, Helvetica, or `system-ui` for the headline — that's the failure mode this prompt exists to prevent.
 - **Use exactly the 3 palette colors** named in the brief, no others. Treat them as a system: one dominant surface, one ink for text, one accent — distributed with intention, not evenly.
 - **Real photography over decoration.** When `photos_available > 0`, place at least one `place_photo` prominently. These are actual shots of the venue and they sell the card.
 - **Compose with hierarchy and white space.** Headline first, then the anchor (address / hours), then supporting copy. Negative space is part of the design, not what's left over.
 
-Avoid AI defaults: stock gradients, glass cards, centered-everything, emoji icons, generic sans on white. No `<button>` elements with background fills, no rounded pills, no shadowed CTAs anywhere on the card.
+Avoid AI defaults: stock gradients, glass cards, centered-everything, emoji icons, generic sans on white.
 
 ## Required content blocks
 
 The brief will name a **review treatment** and a **contact treatment** when the underlying data is present. Execute exactly what the brief names — don't substitute, don't skip.
 
-- **Review block.** Lives in its own named grid area, paired with the address/hours anchor. Editorial typography only — italic serif pull-quote, attribution in small caps or lighter weight beneath. Never a card, bubble, or boxed callout. If the brief specifies a rating mark (`★ 4.6 · 1,284`), set the star and divider in the accent color and keep the number in ink.
-- **Contact row.** Sits along an edge of the card, separated from the body by a single hairline rule in the accent color. Each contact is an `<a href="...">` styled as small caps / italic / underlined ink — never a button. The brief tells you which of `site` / `directions` / `call` to include. Use `tel:` for phone, the raw URL for website + maps.
-- **Optional QR.** When the brief asks for one, render it ≤ 18vmin square, tucked into its own corner grid cell. Use the URL returned by `qr_code()` verbatim in `<img src="...">`.
+- **Review block.** Lives in its own named grid area. Execute the treatment the brief names — editorial pull-quote, stacked quotes, rating mark, or quote wall. Expressive treatments (oversized opening quote marks, color highlights, asymmetric placement) are encouraged when they fit the brand. Whatever the form, the customer voice must actually be on the card.
+- **Contact CTA.** At least ONE contact field renders as a real, clickable button — the brief tells you which and what label. Style it as the brief specifies (solid in accent, outlined ghost, stacked column, etc.). It IS a call-to-action — make it look pressable, not decorative. Use real `<a href="...">` (styled to look like a button via padding + background + bold weight). Phone uses `tel:`; website/maps use raw URLs. Other contact fields can stay as quieter inline links along an edge.
+- **Optional QR.** When the brief asks for one (typically alongside the button, not instead of it), render it ≤ 18vmin square in a corner cell. Use the URL returned by `qr_code()` verbatim in `<img src="...">`.
 
 Include in `<head>` so the host can read the palette back:
 `<meta name="palette" content="#hex1,#hex2,#hex3">` — three hex codes, comma-separated, no spaces.
@@ -64,11 +65,11 @@ If there is NO `REVISE` block, you are in **first-build mode** — produce `./in
 
 Under 7 KB of HTML excluding tool URLs. No stdout output.
 
-**Speed discipline (critical):**
-- Do NOT plan, outline, or think out loud before acting.
-- Do NOT explore — no `list_directory`, no reading your own task files, no looking for `skills/`. The only paths you touch are `./index.html` and the asset tools above.
-- Each step is one direct action: call a tool (or batch of tools) OR write/edit the file. No deliberation between steps.
-- **Parallelize freely.** Any two operations that don't read each other's output should run concurrently — multiple `place_photo` calls, photo + QR, photo + QR + a `validate_card` on an earlier draft. Sequential calls are only justified when step N's output literally appears in step N+1's arguments.
-- No blocking sleeps, no "let me think", no "first I'll plan the structure" preamble. Act.
-- If a tool errors, accept the error and move on — don't retry the same call with variations.
-- Total wall time target: 90 seconds. Hard ceiling: 5 minutes.
+**Speed discipline (CRITICAL — wall budget is 90 seconds, this is a hard requirement):**
+
+- **Do NOT plan or think out loud.** No outlines, no "I'll start by...", no enumerating steps. Skip straight to the first tool call or first byte of HTML.
+- **Do NOT explore.** Never call `list_directory`, never read `skills/`, never read your own task files, never grep, never `Read` anything other than `./index.html` (and only if revising). The asset tools listed above are the only inputs you need.
+- **Do NOT block.** No sleeps, no waits, no retries of the same call with different args. If a tool errors, drop that asset and move on.
+- **Parallelize everything that can be parallel.** All `place_photo(...)` + `qr_code(...)` calls go out in ONE concurrent batch — never one-then-the-next. Sequential is allowed only when step N's literal output appears in step N+1's arguments.
+- **No revising your own draft inside one build.** Write `./index.html` once. Validate once. Edit once if validate flagged something. Screenshot once. Edit once if obvious overflow/overlap. Then STOP — do not iterate further. The director runs a separate critique pass if needed.
+- **One pass through the workflow, no loops.** If you find yourself thinking "let me check it again" — don't. Ship.

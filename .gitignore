@@ -51,3 +51,6 @@ env/
 # Build artifacts
 *.pyc
 *.pyo
+
+# agy (Antigravity CLI) auto-creates these per workspace
+.antigravitycli/

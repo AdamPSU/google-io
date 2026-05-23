@@ -113,6 +113,7 @@ class BusinessContext(BaseModel):
     website_uri: str | None
     international_phone_number: str | None
     google_maps_uri: str | None
+    email: str | None
     reviews: list[Review]
     photos: list[Photo]
     raw_html_bytes: int
@@ -169,6 +170,31 @@ async def fetch_html(http: httpx.AsyncClient, url: str) -> str:
         logger.warning("website fetch returned %d for %s", resp.status_code, url)
         raise HTTPException(status_code=502, detail="website fetch failed")
     return resp.text
+
+
+# Try mailto: links first — they're the most reliable signal of a real
+# contact address. Plain @-pattern matching is the fallback; filter out
+# obvious junk (image/asset references, common placeholder domains).
+_MAILTO_RE = re.compile(
+    r'href\s*=\s*["\']mailto:([^"\'?\s>]+@[^"\'?\s>]+)', re.IGNORECASE
+)
+_PLAIN_EMAIL_RE = re.compile(
+    r'\b[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,24}\b', re.IGNORECASE
+)
+_EMAIL_NOISE = ("@2x.", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".webp",
+                "example.", "sentry.io", "wixpress.com", "your-email")
+
+
+def _extract_email(html: str) -> str | None:
+    m = _MAILTO_RE.search(html)
+    if m:
+        return m.group(1).strip().lower()
+    for match in _PLAIN_EMAIL_RE.finditer(html):
+        candidate = match.group(0).lower()
+        if any(noise in candidate for noise in _EMAIL_NOISE):
+            continue
+        return candidate
+    return None
 
 
 async def distill_html(html: str) -> SiteDistilled:
@@ -287,6 +313,16 @@ async def search(req: SearchRequest) -> BusinessContext:
             "application/json",
         )
 
+    email = _extract_email(raw_html) if raw_html else None
+    if email:
+        await asyncio.to_thread(
+            _upload_context,
+            job_id,
+            "email.txt",
+            email.encode("utf-8"),
+            "text/plain; charset=utf-8",
+        )
+
     return BusinessContext(
         job_id=job_id,
         place_id=details["id"],
@@ -301,6 +337,7 @@ async def search(req: SearchRequest) -> BusinessContext:
         website_uri=website_uri,
         international_phone_number=details.get("internationalPhoneNumber"),
         google_maps_uri=details.get("googleMapsUri"),
+        email=email,
         reviews=_map_reviews(details.get("reviews")),
         photos=_map_photos(details.get("photos")),
         raw_html_bytes=len(raw_html.encode("utf-8")) if raw_html else 0,
@@ -382,16 +419,20 @@ async def get_generation(job_id: str, request: Request) -> GenerationView:
 
 WAITING_HTML = b"""<!doctype html>
 <html><head><meta charset="utf-8"><style>
-html,body{margin:0;height:100vh;width:100vw;background:#1F3A2E;color:#FFFDF6;
-font-family:Georgia,'Times New Roman',serif;display:grid;place-items:center;overflow:hidden;}
-.stack{display:flex;flex-direction:column;align-items:center;gap:1.1rem;}
-.dot{width:7px;height:7px;border-radius:50%;background:#FFFDF6;opacity:.45;
-animation:breath 1.8s ease-in-out infinite;}
-.label{font-size:10px;letter-spacing:.22em;color:rgba(255,253,246,.65);
-text-transform:lowercase;font-family:inherit;}
-@keyframes breath{0%,100%{opacity:.45;transform:scale(1);}50%{opacity:1;transform:scale(1.7);}}
-</style></head><body><div class="stack"><span class="dot"></span>
-<span class="label">pressing your carte&hellip;</span></div></body></html>"""
+html,body{margin:0;height:100vh;width:100vw;background:transparent;
+display:grid;place-items:center;overflow:hidden;}
+.morph{width:56px;height:56px;background:#FFFDF6;
+animation:smoothMorph 3s ease-in-out infinite;}
+@keyframes smoothMorph{
+0%{transform:scale(1) rotate(0deg);border-radius:50%;}
+20%{transform:scale(.9) rotate(72deg);border-radius:35%;}
+40%{transform:scale(1.1) rotate(144deg);border-radius:15%;}
+60%{transform:scale(.85) rotate(216deg);border-radius:8%;}
+80%{transform:scale(1.05) rotate(288deg);border-radius:25%;}
+100%{transform:scale(1) rotate(360deg);border-radius:50%;}
+}
+@media (prefers-reduced-motion:reduce){.morph{animation:none;}}
+</style></head><body><div class="morph" aria-hidden></div></body></html>"""
 
 
 @app.get("/api/preview/{job_id}")
@@ -506,6 +547,9 @@ async def get_context(job_id: str) -> BusinessContext:
         except Exception:
             logger.exception("site-distilled.json parse failed for %s", job_id)
 
+    email_bytes = await asyncio.to_thread(_download, "email.txt")
+    email = email_bytes.decode("utf-8", errors="replace").strip() if email_bytes else None
+
     return BusinessContext(
         job_id=job_id,
         place_id=details.get("id", ""),
@@ -520,6 +564,7 @@ async def get_context(job_id: str) -> BusinessContext:
         website_uri=details.get("websiteUri"),
         international_phone_number=details.get("internationalPhoneNumber"),
         google_maps_uri=details.get("googleMapsUri"),
+        email=email,
         reviews=_map_reviews(details.get("reviews")),
         photos=_map_photos(details.get("photos")),
         raw_html_bytes=0,
@@ -635,6 +680,15 @@ async def _run_slice_one_streaming(
             )
         except Exception:
             logger.exception("distill failed for %s", job.job_id)
+
+        email = _extract_email(raw_html)
+        if email:
+            _schedule_upload(
+                job.job_id,
+                "email.txt",
+                email.encode("utf-8"),
+                "text/plain; charset=utf-8",
+            )
 
     display_name = _nested(details, "displayName", "text", default=query)
     jobs.emit(job, {"event": "context", "name": display_name})

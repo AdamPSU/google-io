@@ -2,54 +2,61 @@
 
 import { useMemo, useRef, useState } from "react";
 
-// A sticky note reads as a sticky note — canary yellow paper, dark ink,
-// rust-red stamp. Deliberately NOT tied to the LLM palette: when the card
-// flips to green or navy, the sticky note stays the universally legible
-// "post-it on the desk" object. The carte is themed; the note is constant.
+// A sticky note reads as a sticky note — canary yellow paper, dark ink.
+// Deliberately NOT tied to the LLM palette: when the card flips to green
+// or navy, the sticky note stays the universally legible "post-it on the
+// desk" object. The carte is themed; the note is constant.
 const PAPER = "#FBE48C";
 const INK = "#1F1B16";
-const STAMP = "#9B3A2A";
-
-type Status = "idle" | "sending" | "sent";
 
 type Props = {
   businessName: string | null;
   ready: boolean;
+  /** Real email extracted from the business's website. Preferred over the
+   *  domain-derived fallback when present. */
+  email?: string | null;
+  /** Used to derive a plausible `info@{domain}` address when no real email
+   *  was found in the site's HTML. */
+  websiteUri?: string | null;
 };
 
-function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 24) || "hello";
+function domainOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
 }
 
-export function NoteToBusiness({ businessName, ready }: Props) {
+export function NoteToBusiness({
+  businessName,
+  ready,
+  email,
+  websiteUri,
+}: Props) {
   const [note, setNote] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  const email = useMemo(
-    () => `hello@${slugify(businessName ?? "")}.com`,
-    [businessName],
-  );
+  // Real email > domain-derived `info@{site}` > nothing. Both fallbacks
+  // keep the note feeling addressed to a real recipient even before the
+  // BusinessContext fetch resolves.
+  const resolvedEmail = useMemo(() => {
+    if (email) return email;
+    const domain = domainOf(websiteUri);
+    return domain ? `info@${domain}` : null;
+  }, [email, websiteUri]);
 
-  const idle = status === "idle";
-  const canSend = idle && note.trim().length > 0 && !!businessName;
-
-  function send() {
-    if (!canSend) return;
-    setStatus("sending");
-    window.setTimeout(() => setStatus("sent"), 850);
-  }
-
-  function reset() {
-    setNote("");
-    setStatus("idle");
-    requestAnimationFrame(() => taRef.current?.focus());
-  }
+  // Send is intentionally a no-op — this pane is a "vibe" element on the
+  // sandbox; the button is decorative, not a real outbound action. Keep
+  // it visible/styled but inert.
+  const send = () => {};
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Swallow Cmd/Ctrl+Enter so the textarea doesn't fire a stray submit
+    // on a form somewhere up the tree; no action triggered.
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
-      send();
     }
   }
 
@@ -129,13 +136,15 @@ export function NoteToBusiness({ businessName, ready }: Props) {
             className="truncate"
             style={{
               fontFamily: "var(--font-sans)",
-              fontSize: "0.74rem",
+              fontSize: "0.78rem",
               letterSpacing: "0.005em",
-              color: `color-mix(in srgb, ${INK} ${businessName ? 60 : 35}%, transparent)`,
+              color: resolvedEmail
+                ? `color-mix(in srgb, ${INK} 75%, transparent)`
+                : `color-mix(in srgb, ${INK} 35%, transparent)`,
               marginTop: "0.1rem",
             }}
           >
-            {email}
+            {resolvedEmail ?? "—"}
           </div>
         </div>
 
@@ -151,46 +160,30 @@ export function NoteToBusiness({ businessName, ready }: Props) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onKeyDown={onKeyDown}
-          disabled={!businessName || !idle}
           spellCheck={false}
-          placeholder={
-            !businessName
-              ? "the carte's almost ready…"
-              : "i made a little card for your business. hope it makes you smile."
-          }
-          className="block w-full resize-none border-0 bg-transparent px-0 outline-none placeholder:opacity-50 disabled:opacity-50"
+          placeholder="i made a little card for your business. hope it makes you smile."
+          className="block w-full resize-none border-0 bg-transparent px-0 outline-none placeholder:opacity-60"
           style={{
             fontFamily: "var(--font-sans)",
-            fontSize: "0.9rem",
+            fontSize: "0.95rem",
+            fontWeight: 500,
             lineHeight: "28px",
             color: INK,
             minHeight: 168,
-            opacity:
-              status === "sent" ? 0.42 : status === "sending" ? 0.85 : 1,
-            transition: "opacity 220ms ease-out",
+            opacity: 1,
             backgroundImage: `linear-gradient(to top, color-mix(in srgb, ${INK} 14%, transparent) 1px, transparent 1px)`,
             backgroundSize: "100% 28px",
             backgroundAttachment: "local",
             backgroundOrigin: "content-box",
             backgroundClip: "content-box",
           }}
-          aria-busy={status === "sending"}
         />
 
         <div className="mt-3 flex items-end justify-between">
-          <CharCount n={note.length} dimmed={status === "sent"} />
-          {status === "sent" ? (
-            <ResetLink onClick={reset} />
-          ) : (
-            <SendLink
-              busy={status === "sending"}
-              disabled={!canSend}
-              onClick={send}
-            />
-          )}
+          <CharCount n={note.length} />
+          {/* Send is intentionally inert — see send() above. */}
+          <SendLink onClick={send} />
         </div>
-
-        {status === "sent" && <SentStamp />}
       </div>
     </aside>
   );
@@ -267,7 +260,7 @@ function SquigglyDivider() {
   );
 }
 
-function CharCount({ n, dimmed }: { n: number; dimmed?: boolean }) {
+function CharCount({ n }: { n: number }) {
   return (
     <span
       aria-hidden
@@ -277,7 +270,7 @@ function CharCount({ n, dimmed }: { n: number; dimmed?: boolean }) {
         letterSpacing: "0.16em",
         textTransform: "uppercase",
         color: `color-mix(in srgb, ${INK} 45%, transparent)`,
-        opacity: n === 0 ? 0 : dimmed ? 0.5 : 1,
+        opacity: n === 0 ? 0 : 1,
         transition: "opacity 200ms ease-out",
         minHeight: "1rem",
       }}
@@ -287,65 +280,32 @@ function CharCount({ n, dimmed }: { n: number; dimmed?: boolean }) {
   );
 }
 
-function SendLink({
-  busy,
-  disabled,
-  onClick,
-}: {
-  busy: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
+function SendLink({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled || busy}
       className="group relative inline-flex items-center gap-1.5 bg-transparent p-0 outline-none"
       style={{
-        cursor: disabled || busy ? "default" : "pointer",
-        opacity: disabled ? 0.32 : 1,
+        cursor: "pointer",
         color: INK,
         fontFamily: "var(--font-hand)",
         fontWeight: 700,
         fontSize: "1.35rem",
         lineHeight: 1,
         WebkitTextStroke: `0.35px ${INK}`,
-        transition: "opacity 200ms ease-out",
       }}
     >
-      {busy ? (
-        <>
-          <span>writing it down</span>
-          <span aria-hidden className="inline-flex translate-y-[1px] gap-[3px]">
-            <Dot delay={0} />
-            <Dot delay={180} />
-            <Dot delay={360} />
-          </span>
-        </>
-      ) : (
-        <>
-          <span>send it</span>
-          <span
-            aria-hidden
-            className="inline-flex transition-transform duration-200 ease-out group-hover:translate-x-[3px]"
-            style={{ transform: "translateY(1px)" }}
-          >
-            <ArrowGlyph />
-          </span>
-        </>
-      )}
-      {!disabled && !busy && <HoverSquiggle />}
+      <span>send it</span>
+      <span
+        aria-hidden
+        className="inline-flex transition-transform duration-200 ease-out group-hover:translate-x-[3px]"
+        style={{ transform: "translateY(1px)" }}
+      >
+        <ArrowGlyph />
+      </span>
+      <HoverSquiggle />
     </button>
-  );
-}
-
-function Dot({ delay }: { delay: number }) {
-  return (
-    <span
-      className="ink-dot inline-block h-[3px] w-[3px] rounded-full"
-      style={{ background: INK, animationDelay: `${delay}ms` }}
-    />
   );
 }
 
@@ -397,98 +357,3 @@ function HoverSquiggle() {
   );
 }
 
-function ResetLink({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="bg-transparent p-0 outline-none"
-      style={{
-        cursor: "pointer",
-        color: `color-mix(in srgb, ${INK} 75%, transparent)`,
-        fontFamily: "var(--font-hand)",
-        fontWeight: 700,
-        fontSize: "1.1rem",
-        textDecoration: "underline",
-        textUnderlineOffset: "3px",
-        textDecorationThickness: "0.6px",
-      }}
-    >
-      write another?
-    </button>
-  );
-}
-
-function SentStamp() {
-  return (
-    <div
-      className="stamp-drop pointer-events-none absolute"
-      aria-hidden
-      style={{
-        top: 14,
-        right: 14,
-        width: 84,
-        height: 84,
-        transformOrigin: "70% 30%",
-      }}
-    >
-      <svg
-        viewBox="0 0 100 100"
-        width="84"
-        height="84"
-        style={{ overflow: "visible" }}
-      >
-        <circle
-          cx="50"
-          cy="50"
-          r="44"
-          fill="none"
-          stroke={STAMP}
-          strokeWidth="1.6"
-          strokeDasharray="3 3"
-          opacity="0.9"
-        />
-        <circle
-          cx="50"
-          cy="50"
-          r="36"
-          fill="none"
-          stroke={STAMP}
-          strokeWidth="0.8"
-          opacity="0.7"
-        />
-        <defs>
-          <path id="stamp-arc" d="M 20 50 A 30 30 0 0 1 80 50" />
-        </defs>
-        <text
-          fill={STAMP}
-          style={{
-            fontFamily: "var(--font-hand)",
-            fontWeight: 700,
-            letterSpacing: "0.04em",
-          }}
-          fontSize="22"
-        >
-          <textPath href="#stamp-arc" startOffset="50%" textAnchor="middle">
-            sent
-          </textPath>
-        </text>
-        <g
-          transform="translate(50 64)"
-          stroke={STAMP}
-          strokeWidth="1.2"
-          fill="none"
-          opacity="0.95"
-        >
-          <ellipse cx="0" cy="-5" rx="1.8" ry="4" />
-          <ellipse cx="0" cy="5" rx="1.8" ry="4" />
-          <ellipse cx="-5" cy="0" rx="4" ry="1.8" />
-          <ellipse cx="5" cy="0" rx="4" ry="1.8" />
-          <ellipse cx="-3.5" cy="-3.5" rx="3" ry="1.5" transform="rotate(-45 -3.5 -3.5)" />
-          <ellipse cx="3.5" cy="3.5" rx="3" ry="1.5" transform="rotate(-45 3.5 3.5)" />
-          <circle cx="0" cy="0" r="0.9" fill={STAMP} />
-        </g>
-      </svg>
-    </div>
-  );
-}

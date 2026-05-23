@@ -51,12 +51,21 @@ CONTEXT_KEY = "{job_id}/context/{name}"
 SITE_KEY = "{job_id}/site/index.html"
 SIGNED_URL_TTL_SECONDS = 60 * 60
 
-PROMPTER_TIMEOUT_S = 120
-BUILDER_TIMEOUT_S = 600
-CRITIC_TIMEOUT_S = 120
+PROMPTER_TIMEOUT_S = 60
+BUILDER_TIMEOUT_S = 300
+CRITIC_TIMEOUT_S = 90
 
-MAX_ROUNDS = 4
+# Single opus build, no critic loop. Bumping this to 2+ reintroduces the
+# director/builder back-and-forth (the critic+revise cycle costs ~60-90s
+# per round and tends to converge on trivial edits — pushed us over the
+# 2-min wall budget).
+MAX_ROUNDS = 1
 APPROVE_TOKEN = "APPROVE"
+
+# Opus 4.7 for every step. Speed comes from prompts (anti-planning,
+# parallel-fetch directives), not from downgrading the model — Haiku and
+# Sonnet both got slower on this workload, not faster.
+MODEL = "claude-opus-4-7"
 
 WATCH_INTERVAL_S = 0.25
 
@@ -173,7 +182,11 @@ def _write_mcp_config(build_dir: Path, job_id: str) -> Path:
 def _run_prompter(runner: str, context: dict, job_id: str) -> str:
     """Round 0: turn the compacted context into a creative brief."""
     proc = subprocess.Popen(
-        [runner, "-p", "--system-prompt", _load_prompt("prompter")],
+        [
+            runner, "-p",
+            "--model", MODEL,
+            "--system-prompt", _load_prompt("prompter"),
+        ],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -212,6 +225,7 @@ def _builder_input(brief: str, critiques: list[str]) -> str:
 def _builder_argv(runner: str, mcp_config: Path) -> list[str]:
     return [
         runner, "-p",
+        "--model", MODEL,
         "--mcp-config", str(mcp_config),
         "--allowedTools", BUILDER_ALLOWED_TOOLS,
         "--dangerously-skip-permissions",
@@ -222,6 +236,7 @@ def _builder_argv(runner: str, mcp_config: Path) -> list[str]:
 def _critic_argv(runner: str, mcp_config: Path) -> list[str]:
     return [
         runner, "-p",
+        "--model", MODEL,
         "--mcp-config", str(mcp_config),
         "--allowedTools", CRITIC_ALLOWED_TOOLS,
         "--dangerously-skip-permissions",
@@ -328,7 +343,8 @@ def _upload_site(job_id: str, html: str) -> None:
 
 
 def _insert_generation_row(job_id: str, website_uri: str | None) -> None:
-    get_client().table("generations").insert(
+    """Upsert by id — re-running a job replaces its row instead of 409-ing."""
+    get_client().table("generations").upsert(
         {"id": job_id, "url": website_uri}
     ).execute()
 

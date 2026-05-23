@@ -8,15 +8,49 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { BackgroundScene } from "@/components/ui/background-scene";
 import { NoteToBusiness } from "@/components/ui/note-to-business";
 import { Tilt } from "@/components/ui/tilt";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// Default chrome — used until the LLM-chosen palette arrives. Deep forest
-// green ink on cream reads as an apothecary / restaurant-menu palette. Once
-// the build emits `<meta name="palette">`, the outer div overrides the
-// --carte-* variables and the whole chrome re-themes to the card's palette.
+// The page chrome lives in two zones with inverted palettes:
+//   - Masthead (TopBar + NavRule): a solid cream paper strip; text paints
+//     in dark warm ink, ornaments in sienna — like a printed menu header.
+//   - Page stage (CornerBrackets and anything outside the masthead): cream
+//     on the dark video, with a soft text-shadow for legibility.
+// CHROME_* drives the on-video chrome; NAV_* drives the cream masthead.
+const CHROME_INK = "#FFFDF6";
+const CHROME_ACCENT = "#F0D9A8";
+const CHROME_SHADOW = "0 1px 2px rgba(25,21,18,0.55)";
+// Default masthead colors. Overridden at runtime via --nav-bg / --nav-ink /
+// --nav-accent CSS vars once the build's palette arrives.
+const NAV_BG = "#F5EFE0";
+const NAV_INK = "#2A1F17";
+const NAV_ACCENT = "#8A5A36";
+
+// WCAG relative luminance — used to pick between white and near-black ink
+// against the build's chosen background color. Anything brighter than
+// ~0.5 reads as a light surface (use dark ink); below, use white ink.
+function relativeLuminance(hex: string): number {
+  const m = hex.replace("#", "").match(/.{2}/g);
+  if (!m || m.length < 3) return 0.5;
+  const [r, g, b] = m.slice(0, 3).map((h) => {
+    const c = parseInt(h, 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function inkForBg(bgHex: string): string {
+  return relativeLuminance(bgHex) > 0.5 ? "#1A1A1A" : "#FFFFFF";
+}
+
+// --carte-* still gets set on the outer div so descendant *surfaces* that
+// own their own background (the carte itself, the archive drawer
+// interior) can theme to the LLM palette. INK/BG are the variable refs
+// children use; they fall back to the cream/forest-green defaults the
+// builder produced before any palette arrives.
 const DEFAULT_BG = "#FFFDF6";
 const DEFAULT_INK = "#1F3A2E";
 const INK = `var(--carte-ink, ${DEFAULT_INK})`;
@@ -35,30 +69,6 @@ type Generation = {
   preview_url: string;
 };
 
-// Mirror of backend BusinessContext (slim — only fields the chrome reads).
-type SiteDistilled = {
-  tagline: string | null;
-  description: string;
-  tone: string;
-  vibe_tags: string[];
-  key_phrases: string[];
-  visual_cues: string[];
-  site_summary: string;
-};
-
-type BusinessContext = {
-  job_id: string;
-  name: string;
-  address: string;
-  rating: number | null;
-  user_rating_count: number | null;
-  types: string[];
-  editorial_summary: string | null;
-  website_uri: string | null;
-  google_maps_uri: string | null;
-  site_distilled: SiteDistilled | null;
-};
-
 export function SandboxClient({
   initialJobId,
   initialName,
@@ -73,13 +83,59 @@ export function SandboxClient({
   const [status, setStatus] = useState<Status>({ kind: "waiting" });
   const [regenerating, setRegenerating] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [context, setContext] = useState<BusinessContext | null>(null);
+  const [contactEmail, setContactEmail] = useState<string | null>(null);
+  const [websiteUri, setWebsiteUri] = useState<string | null>(null);
   const paletteFetchedRef = useRef(false);
+
+  // Sync URL → state. App Router keeps this client component mounted
+  // across query-string changes, so a router.push to a new ?job_id=
+  // (from HistoryStrip, ArchiveDrawer, or any deep link) doesn't
+  // re-run useState's initializer. Watch the prop and push it in
+  // ourselves so the SSE + palette effect below kicks off for the
+  // newly-selected job.
+  useEffect(() => {
+    setJobId(initialJobId);
+    setName(initialName);
+  }, [initialJobId, initialName]);
+
+  // Fetch slice-1 BusinessContext for the current job (email + website,
+  // any other surfaces that want richer data). Only the bits the
+  // NoteToBusiness pane needs are plumbed into state; the rest stays
+  // on the server. Refires whenever jobId changes; tries again when
+  // a build reaches "done" since the row may have been new.
+  useEffect(() => {
+    if (!jobId) {
+      setContactEmail(null);
+      setWebsiteUri(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/context/${encodeURIComponent(jobId)}`,
+          { cache: "no-store" },
+        );
+        if (!res.ok || cancelled) return;
+        const ctx = (await res.json()) as {
+          email: string | null;
+          website_uri: string | null;
+        };
+        if (cancelled) return;
+        setContactEmail(ctx.email ?? null);
+        setWebsiteUri(ctx.website_uri ?? null);
+      } catch {
+        // silent — note pane just falls back to a domain-derived email
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, status.kind]);
 
   useEffect(() => {
     setPalette([]);
     setStatus({ kind: "waiting" });
-    setContext(null);
     paletteFetchedRef.current = false;
 
     // No job_id: fall back to the most recent historic generation.
@@ -219,24 +275,6 @@ export function SandboxClient({
     };
   }, [jobId]);
 
-  // Fetch slice-1 context so the chrome can surface rating / reviews /
-  // type / editorial summary / maps link. Runs on jobId change and once
-  // more on `ready` (in case the live job reached ready before slice-1
-  // upload settled). 404s are silently ignored — context simply remains
-  // null and the chrome degrades to "just name + palette".
-  useEffect(() => {
-    if (!jobId) return;
-    let cancelled = false;
-    const load = async () => {
-      const ctx = await fetchContext(jobId);
-      if (!cancelled && ctx) setContext(ctx);
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId, status.kind === "done"]);
-
   const regenerate = useCallback(async () => {
     if (!name || regenerating) return;
     setRegenerating(true);
@@ -286,6 +324,12 @@ export function SandboxClient({
     "--carte-accent": themed ? palette[2] : DEFAULT_INK,
     "--carte-paper":
       "color-mix(in oklab, var(--carte-bg) 92%, var(--carte-ink) 8%)",
+    // Masthead retints in lockstep with the card. Bg + accent come straight
+    // from the brand palette; ink picks white vs near-black via luminance
+    // so contrast holds regardless of what palette[1] turned out to be.
+    "--nav-bg": themed ? palette[0] : NAV_BG,
+    "--nav-ink": themed ? inkForBg(palette[0]) : NAV_INK,
+    "--nav-accent": themed ? palette[2] : NAV_ACCENT,
   } as CSSProperties;
 
   const createdAt =
@@ -296,28 +340,49 @@ export function SandboxClient({
       className="relative isolate flex h-screen flex-col overflow-hidden"
       style={{
         ...themeVars,
-        background: BG,
-        color: INK,
-        transition:
-          "background-color 700ms ease-out, color 700ms ease-out",
+        color: CHROME_INK,
       }}
     >
-      <PaperGrain />
-      <TopBar
-        name={name}
-        jobId={jobId}
-        createdAt={createdAt}
-        onOpenArchive={() => setArchiveOpen(true)}
-      />
-      <NavRule />
+      <BackgroundScene />
+      {/* Masthead: a solid cream paper strip across the top of the page.
+          Reads as a printed menu header — warm, inviting — with the dark
+          video stage and the carte beneath. A soft drop-shadow on the
+          bottom edge lifts it off the stage. */}
+      <div
+        className="relative shrink-0 transition-[background,color] duration-700 ease-out"
+        style={{
+          background: "var(--nav-bg)",
+          color: "var(--nav-ink)",
+          boxShadow:
+            "0 10px 24px -16px rgba(0,0,0,0.55), inset 0 -1px 0 color-mix(in srgb, var(--nav-ink) 10%, transparent)",
+        }}
+      >
+        <TopBar
+          name={name}
+          jobId={jobId}
+          createdAt={createdAt}
+          onOpenArchive={() => setArchiveOpen(true)}
+        />
+        <NavRule />
+      </div>
 
       <main
-        className="flex min-h-0 flex-1 items-center justify-center gap-8 px-6 pb-2 sm:px-10"
+        className="flex min-h-0 flex-1 items-stretch justify-center gap-8 px-6 py-4 sm:px-10 sm:py-6"
         style={{ "--note-w": "360px" } as CSSProperties}
       >
-        <Tilt max={5}>
-          <div className="fade-up" style={{ animationDelay: "120ms" }}>
-            <div className="relative">
+        <div
+          className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center"
+          style={{ containerType: "size" }}
+        >
+          <Tilt max={5}>
+            <div
+              className="fade-up relative"
+              style={{
+                animationDelay: "120ms",
+                width: "min(calc(100cqh * 16 / 9), 100cqw)",
+                aspectRatio: "16 / 9",
+              }}
+            >
               <CornerBrackets />
               <CardFrame ready={showIframe}>
                 {status.kind === "retry" && <SoftRetry />}
@@ -332,14 +397,23 @@ export function SandboxClient({
                 )}
               </CardFrame>
             </div>
-          </div>
-        </Tilt>
+          </Tilt>
+        </div>
         <Tilt max={8}>
-          <NoteToBusiness businessName={name} ready={showIframe} />
+          <NoteToBusiness
+            businessName={name}
+            ready={showIframe}
+            email={contactEmail}
+            websiteUri={websiteUri}
+          />
         </Tilt>
       </main>
 
-      <EditorialFooter context={context} palette={palette} />
+      <HistoryStrip
+        currentJobId={jobId}
+        refreshKey={status.kind === "done" ? status.revision : 0}
+      />
+
       <ArchiveDrawer
         open={archiveOpen}
         onClose={() => setArchiveOpen(false)}
@@ -347,19 +421,6 @@ export function SandboxClient({
       />
     </div>
   );
-}
-
-async function fetchContext(jobId: string): Promise<BusinessContext | null> {
-  try {
-    const res = await fetch(
-      `${API_URL}/api/context/${encodeURIComponent(jobId)}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) return null;
-    return (await res.json()) as BusinessContext;
-  } catch {
-    return null;
-  }
 }
 
 async function fetchPalette(jobId: string): Promise<string[]> {
@@ -393,10 +454,17 @@ function TopBar({
       style={{ animationDelay: "0ms" }}
     >
       <div className="flex items-baseline gap-4 justify-self-start sm:gap-5">
-        <a href="/" className="inline-flex items-baseline gap-3">
-          {/* Brand wordmark stays ink-black (#191512) rather than the page's
-              themed INK — Carte is the constant across every state. */}
-          <span className="text-base sm:text-lg" style={{ color: "#191512" }}>
+        <a
+          href="/"
+          className="inline-flex items-baseline gap-3 transition-opacity duration-200 hover:opacity-80"
+        >
+          <span
+            className="text-lg sm:text-xl"
+            style={{
+              color: "var(--nav-ink)",
+              letterSpacing: "-0.01em",
+            }}
+          >
             <span style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}>
               Carte
             </span>
@@ -416,19 +484,19 @@ function TopBar({
           aria-hidden
           className="hidden h-3 w-px sm:inline-block"
           style={{
-            background: `color-mix(in srgb, ${INK} 22%, transparent)`,
+            background: "color-mix(in srgb, var(--nav-ink) 22%, transparent)",
           }}
         />
         <button
           type="button"
           onClick={onOpenArchive}
-          className="hidden bg-transparent p-0 outline-none transition-opacity duration-200 hover:opacity-60 sm:inline-flex"
+          className="hidden bg-transparent p-0 outline-none transition-opacity duration-200 hover:opacity-70 sm:inline-flex"
           style={{
             fontFamily: "var(--font-sans)",
             fontSize: "0.62rem",
             letterSpacing: "0.24em",
             textTransform: "uppercase",
-            color: `color-mix(in srgb, ${INK} 65%, transparent)`,
+            color: "color-mix(in srgb, var(--nav-ink) 78%, transparent)",
             cursor: "pointer",
           }}
         >
@@ -448,7 +516,7 @@ function TopBar({
                 fontSize: "clamp(1.6rem, 3vw, 2.6rem)",
                 letterSpacing: "-0.02em",
                 lineHeight: 1.05,
-                color: INK,
+                color: "var(--nav-ink)",
               }}
               title={name}
             >
@@ -481,7 +549,7 @@ function ColophonMark({
     <div
       className="hidden items-center gap-2 justify-self-end sm:flex"
       style={{
-        color: `color-mix(in srgb, ${INK} 60%, transparent)`,
+        color: "color-mix(in srgb, var(--nav-ink) 72%, transparent)",
       }}
     >
       <span
@@ -500,7 +568,7 @@ function ColophonMark({
           fontStyle: "italic",
           fontSize: "0.92rem",
           letterSpacing: "0.04em",
-          color: INK,
+          color: "var(--nav-ink)",
         }}
       >
         {serial}
@@ -524,70 +592,15 @@ function ColophonMark({
   );
 }
 
-function EditorialFooter({
-  context,
-  palette,
-}: {
-  context: BusinessContext | null;
-  palette: string[];
-}) {
-  // Quieter footer: just the palette swatches with an italic-serif
-  // tagline beneath when context is in hand. The colophon in the nav
-  // already carries the serial + minted time; no need to repeat meta or
-  // links here.
-  const tagline =
-    context?.editorial_summary ??
-    context?.site_distilled?.tagline ??
-    null;
-
-  return (
-    <footer
-      className="fade-up flex shrink-0 flex-col items-center gap-2 px-6 py-4"
-      style={{ animationDelay: "360ms" }}
-    >
-      <div className="flex items-center gap-3">
-        {palette.length === 0 ? (
-          <span aria-hidden className="h-3.5" />
-        ) : (
-          palette.map((hex) => (
-            <span
-              key={hex}
-              title={hex}
-              className="block h-3.5 w-3.5 rounded-sm"
-              style={{
-                background: hex,
-                boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${INK} 14%, transparent)`,
-              }}
-            />
-          ))
-        )}
-      </div>
-      {tagline && (
-        <span
-          className="max-w-[60vw] truncate text-center"
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontSize: "0.85rem",
-            lineHeight: 1.2,
-            color: `color-mix(in srgb, ${INK} 65%, transparent)`,
-          }}
-          title={tagline}
-        >
-          {tagline}
-        </span>
-      )}
-    </footer>
-  );
-}
-
 function CornerBrackets() {
   // Camera-viewfinder marks just outside the carte — small editorial
-  // signal that this object is "the artifact in frame".
-  const size = 12;
-  const offset = -8;
-  const color = `color-mix(in srgb, ${INK} 38%, transparent)`;
-  const thickness = "1.2px";
+  // signal that this object is "the artifact in frame". Painted in the
+  // warm cream-amber accent so they read as candlelight against the dark
+  // video stage — friendly and inviting, complementary to most cartes.
+  const size = 14;
+  const offset = -10;
+  const color = `color-mix(in srgb, ${CHROME_ACCENT} 70%, transparent)`;
+  const thickness = "1px";
   const baseStyle: CSSProperties = {
     width: size,
     height: size,
@@ -650,25 +663,39 @@ function CardFrame({
   children: React.ReactNode;
   ready: boolean;
 }) {
-  // The CardFrame is sized to consume most of the viewport.
-  // Vertical chrome ≈ 8rem total (top bar ~3.5rem + bottom bar ~3.5rem + a
-  // little breathing); we subtract that from 100vh and let aspect-ratio
-  // derive the width, capped to viewport width.
+  // CardFrame fills the 16:9 sleeve that its parent already sized via
+  // container queries. No viewport math here — parent flex chain (main
+  // → card slot → 16:9 sleeve) owns sizing, so the card can never push
+  // past the masthead or the page edges.
+  //
+  // Unready state: an opaque matte warm-charcoal slab. Slightly lifted
+  // from the page bg with a soft top-center radial highlight so it reads
+  // as a closed envelope sitting on the desk catching the room light —
+  // no video bleed-through, just the cream hairline border framing it.
   return (
     <div
-      className="relative overflow-hidden rounded-lg transition-colors duration-500"
+      className="relative h-full w-full overflow-hidden rounded-lg transition-[background,border-color,box-shadow] duration-700 ease-out"
       style={{
-        aspectRatio: "16 / 9",
-        height:
-          "min(calc(100vh - 9rem), calc((100vw - 3rem - var(--note-w, 0px) - 2rem) * 9 / 16))",
-        background: ready ? "#ffffff" : INK,
-        border: `1px solid color-mix(in srgb, ${INK} ${ready ? 10 : 35}%, transparent)`,
-        boxShadow: [
-          `inset 0 0 0 1px color-mix(in srgb, ${BG} 45%, transparent)`,
-          `0 1px 0 color-mix(in srgb, ${BG} 55%, transparent)`,
-          `0 28px 64px -24px color-mix(in srgb, ${INK} 32%, transparent)`,
-          `0 12px 24px -12px color-mix(in srgb, ${INK} 22%, transparent)`,
-        ].join(", "),
+        background: ready
+          ? "#ffffff"
+          : "radial-gradient(120% 80% at 50% 0%, #2a221d 0%, #1f1a17 55%, #18130f 100%)",
+        border: ready
+          ? `1px solid color-mix(in srgb, ${CHROME_INK} 18%, transparent)`
+          : `1px solid color-mix(in srgb, ${CHROME_INK} 16%, transparent)`,
+        boxShadow: ready
+          ? [
+              `inset 0 0 0 1px color-mix(in srgb, ${BG} 45%, transparent)`,
+              `0 1px 0 color-mix(in srgb, ${BG} 55%, transparent)`,
+              `0 28px 64px -24px rgba(0,0,0,0.5)`,
+              `0 12px 24px -12px rgba(0,0,0,0.35)`,
+            ].join(", ")
+          : [
+              `inset 0 1px 0 color-mix(in srgb, ${CHROME_INK} 10%, transparent)`,
+              `inset 0 0 120px -40px color-mix(in srgb, ${CHROME_INK} 8%, transparent)`,
+              `inset 0 -1px 0 rgba(0,0,0,0.45)`,
+              `0 32px 80px -32px rgba(0,0,0,0.65)`,
+              `0 14px 28px -14px rgba(0,0,0,0.45)`,
+            ].join(", "),
       }}
     >
       {children}
@@ -677,15 +704,15 @@ function CardFrame({
 }
 
 function SoftRetry() {
-  // SoftRetry sits inside an unready CardFrame whose background is the
-  // themed INK. Text uses BG (the page background color) so contrast with
-  // the card is guaranteed for any LLM-picked palette: bg-on-ink is the
-  // same pairing as the rest of the chrome, just inverted.
+  // SoftRetry sits inside an unready CardFrame — now a smoked-glass slab
+  // over the dark video stage. So copy is painted in CHROME_INK (cream)
+  // with the same soft text-shadow used by every other chrome element,
+  // keeping the typography consistent with the masthead.
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-6 text-center">
       <span
         aria-hidden
-        style={{ color: `color-mix(in srgb, ${BG} 60%, transparent)` }}
+        style={{ color: `color-mix(in srgb, ${CHROME_INK} 55%, transparent)` }}
       >
         <Fleuron size={6} />
       </span>
@@ -695,7 +722,8 @@ function SoftRetry() {
           fontFamily: "var(--font-serif)",
           fontStyle: "italic",
           fontSize: "clamp(1.1rem, 2.3vw, 1.6rem)",
-          color: BG,
+          color: CHROME_INK,
+          textShadow: CHROME_SHADOW,
         }}
       >
         let&rsquo;s try a different name.
@@ -704,13 +732,14 @@ function SoftRetry() {
         href="/"
         className="transition-opacity hover:opacity-70"
         style={{
-          color: `color-mix(in srgb, ${BG} 85%, transparent)`,
+          color: `color-mix(in srgb, ${CHROME_INK} 88%, transparent)`,
           fontFamily: "var(--font-serif)",
           fontStyle: "italic",
           fontSize: "0.95rem",
           textDecoration: "underline",
           textUnderlineOffset: "5px",
           textDecorationThickness: "0.5px",
+          textShadow: CHROME_SHADOW,
         }}
       >
         begin again
@@ -739,49 +768,28 @@ function Fleuron({ size = 7 }: { size?: number }) {
   );
 }
 
-function PaperGrain() {
-  // Sits in the background of the page chrome to give the cream a real
-  // paper-fiber texture. Same SVG turbulence pattern used on the sticky
-  // note and the landing page background, scaled larger and dimmer here so
-  // it reads as ambient grain rather than visible noise.
-  return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 -z-10"
-      style={{
-        opacity: 0.06,
-        mixBlendMode: "multiply",
-        backgroundImage:
-          "url(\"data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        backgroundSize: "320px 320px",
-      }}
-    />
-  );
-}
-
 function NavRule() {
-  // Editorial page-divider — a fine hairline broken by a centered fleuron,
-  // like the rules used between sections in printed catalogues. Anchors
-  // the header band as a discrete "running head" zone.
+  // Editorial page-divider broken by a centered fleuron. Two half-rules
+  // with a soft gradient fade at the page edges — feels like a newspaper
+  // masthead trailing off into the margins. Sienna on cream paper.
+  const rule =
+    "linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--nav-accent) 45%, transparent) 14%, color-mix(in srgb, var(--nav-accent) 45%, transparent) 100%)";
+  const ruleFlip =
+    "linear-gradient(90deg, color-mix(in srgb, var(--nav-accent) 45%, transparent) 0%, color-mix(in srgb, var(--nav-accent) 45%, transparent) 86%, transparent 100%)";
   return (
-    <div className="shrink-0 px-6 sm:px-10">
-      <div
-        className="relative h-px w-full"
-        style={{
-          background: `color-mix(in srgb, ${INK} 14%, transparent)`,
-        }}
-      >
+    <div className="shrink-0 px-6 sm:px-10 pb-2">
+      <div className="relative flex w-full items-center gap-3">
+        <div className="h-px flex-1" style={{ background: rule }} />
         <span
           aria-hidden
-          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center px-3"
+          className="flex shrink-0 items-center justify-center"
           style={{
-            background: BG,
-            color: `color-mix(in srgb, ${INK} 45%, transparent)`,
-            transition: "background-color 700ms ease-out, color 700ms ease-out",
+            color: "color-mix(in srgb, var(--nav-accent) 85%, transparent)",
           }}
         >
-          <Fleuron size={6} />
+          <Fleuron size={7} />
         </span>
+        <div className="h-px flex-1" style={{ background: ruleFlip }} />
       </div>
     </div>
   );
@@ -809,6 +817,110 @@ type ArchiveItem = {
   url: string | null;
   created_at: string;
 };
+
+// Always-visible row of tiny clickable thumbnails — a glanceable history
+// of recent cartes. Each thumb is a scaled-down iframe of /api/preview;
+// click to navigate. The current job gets a stronger outline.
+function HistoryStrip({
+  currentJobId,
+  refreshKey,
+}: {
+  currentJobId: string | null;
+  refreshKey: number;
+}) {
+  const router = useRouter();
+  const [items, setItems] = useState<ArchiveItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/generations?limit=8`, {
+          cache: "no-store",
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as ArchiveItem[];
+        if (!cancelled) setItems(data);
+      } catch {
+        // silent — strip just stays empty
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey, currentJobId]);
+
+  if (items.length === 0) return null;
+
+  // Internal iframe size + uniform scale: cards render content with vh/vw
+  // so any 16:9 frame composes correctly. Scaling a 1280x720 frame to
+  // 80x45 (factor 0.0625) keeps the math clean and avoids per-thumb
+  // calculation.
+  const THUMB_W = 80;
+  const THUMB_H = 45;
+  const FRAME_W = 1280;
+  const FRAME_H = 720;
+  const SCALE = THUMB_W / FRAME_W;
+
+  return (
+    <div
+      className="fade-up flex shrink-0 items-center justify-center gap-2 px-6 pb-3 pt-1"
+      style={{ animationDelay: "420ms" }}
+    >
+      {items.map((it) => {
+        const isCurrent = it.job_id === currentJobId;
+        const previewUrl = `${API_URL}/api/preview/${encodeURIComponent(it.job_id)}`;
+        return (
+          <button
+            key={it.job_id}
+            type="button"
+            onClick={() => {
+              if (isCurrent) return;
+              router.push(`/sandbox?job_id=${encodeURIComponent(it.job_id)}`);
+            }}
+            title={new Date(it.created_at).toLocaleString()}
+            aria-label={`open carte from ${new Date(it.created_at).toLocaleString()}`}
+            className="block bg-transparent p-0 outline-none transition-opacity duration-200 hover:opacity-100"
+            style={{
+              cursor: isCurrent ? "default" : "pointer",
+              opacity: isCurrent ? 1 : 0.6,
+            }}
+          >
+            <div
+              className="relative overflow-hidden rounded-[3px]"
+              style={{
+                width: THUMB_W,
+                height: THUMB_H,
+                background: "#1F3A2E",
+                outline: isCurrent
+                  ? `1.5px solid ${CHROME_INK}`
+                  : `1px solid color-mix(in srgb, ${CHROME_INK} 25%, transparent)`,
+                outlineOffset: isCurrent ? 2 : 0,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.28)",
+              }}
+            >
+              <iframe
+                src={previewUrl}
+                sandbox="allow-scripts"
+                loading="lazy"
+                aria-hidden
+                tabIndex={-1}
+                style={{
+                  width: FRAME_W,
+                  height: FRAME_H,
+                  transform: `scale(${SCALE})`,
+                  transformOrigin: "top left",
+                  border: 0,
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function ArchiveDrawer({
   open,
@@ -1115,7 +1227,7 @@ function Flourish({ flip = false }: { flip?: boolean }) {
       fill="none"
       aria-hidden
       style={{
-        color: `color-mix(in srgb, ${INK} 55%, transparent)`,
+        color: "color-mix(in srgb, var(--nav-accent) 80%, transparent)",
         transform: flip ? "scaleX(-1)" : undefined,
         flexShrink: 0,
       }}
